@@ -1,1253 +1,295 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
     <title>행운수집기 - 로또 번호 추첨 게임</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
-        body {
-            margin: 0;
-            padding: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+        html,body { height:100%; }
+        body{
+            min-height:100vh;
+            display:flex;
+            align-items:flex-start;
+            justify-content:center;
+            background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: white;
-            overflow-x: hidden;
-            overflow-y: auto;
+            color:#fff;
+            padding:12px;
         }
-        
-        /* PC 레이아웃 */
-        @media (min-width: 769px) {
-            body {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: flex-start;
-                min-height: 100vh;
-                padding: 20px;
-            }
-            
-            .container {
-                background: rgba(255, 255, 255, 0.1);
-                backdrop-filter: blur(10px);
-                padding: 20px;
-                border-radius: 20px;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-                max-width: 650px;
-                width: 100%;
-                margin-bottom: 20px;
-            }
-            
-            #canvasContainer {
-                position: relative;
-                width: 100%;
-                max-width: 600px;
-                margin: 0 auto;
-                touch-action: none;
-            }
-            
-            canvas {
-                width: 600px !important;
-                height: 400px !important;
-            }
+        .app {
+            width:100%;
+            max-width:980px;
         }
-        
-        /* 모바일 레이아웃 */
-        @media (max-width: 768px) {
-            body {
-                padding: 0;
-                height: 100vh;
-                overflow: hidden;
-            }
-            
-            .container {
-                display: flex;
-                flex-direction: column;
-                height: 100vh;
-                width: 100vw;
-                background: transparent;
-            }
-            
-            .mobile-header {
-                padding: 8px;
-                text-align: center;
-                background: rgba(0, 0, 0, 0.3);
-            }
-            
-            h1 {
-                font-size: 18px;
-                margin: 0;
-            }
-            
-            .instructions {
-                display: none;
-            }
-            
-            #canvasContainer {
-                flex: 1;
-                position: relative;
-                width: 100vw;
-                touch-action: none;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-            
-            canvas {
-                width: 100vw !important;
-                height: calc(100vw * 0.75) !important;
-                max-height: 80vh !important;
-            }
-            
-            .controls {
-                display: none;
-            }
-            
-            .info {
-                display: none;
-            }
-            
-            .mobile-bottom {
-                padding: 10px;
-                background: rgba(0, 0, 0, 0.3);
-                max-height: 20vh;
-                overflow-y: auto;
-            }
-            
-            .share-section {
-                margin: 0;
-                padding: 8px;
-                background: rgba(255, 215, 0, 0.2);
-                border-radius: 8px;
-            }
-            
-            .share-section > div:first-child {
-                font-size: 12px;
-                margin-bottom: 5px;
-            }
-            
-            .lucky-numbers {
-                font-size: 14px;
-                margin: 5px 0;
-            }
-            
-            .share-buttons {
-                gap: 5px;
-                margin-top: 5px;
-            }
-            
-            .share-btn {
-                padding: 6px 10px;
-                font-size: 11px;
-            }
-            
-            .donation {
-                margin-top: 8px;
-                padding: 8px;
-                font-size: 10px;
-                line-height: 1.4;
-            }
-            
-            .donation-account {
-                font-size: 11px;
-                margin-top: 3px;
-            }
+        .header {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+            margin-bottom:10px;
         }
-        
-        /* 공통 스타일 */
-        h1 {
-            text-align: center;
+        h1{
+            font-size:clamp(18px,4vw,26px);
+            margin:0;
+            display:flex;
+            align-items:center;
+            gap:8px;
         }
-        
-        .instructions {
-            text-align: center;
-            margin: 10px 0;
-            font-size: 14px;
-            opacity: 0.9;
+        .controls-top {
+            display:flex;
+            gap:8px;
+            align-items:center;
         }
-        
-        canvas {
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 10px;
-            background: #1a1a2e;
-            display: block;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-            touch-action: none;
+        #volumeBtn{
+            background:rgba(255,255,255,0.08);
+            color:white;
+            border:1px solid rgba(255,255,255,0.12);
+            padding:8px 12px;
+            border-radius:8px;
+            cursor:pointer;
+            font-weight:600;
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
         }
-        
-        .controls {
-            margin-top: 15px;
-            text-align: center;
-            font-size: 14px;
-            line-height: 1.6;
+        #volumeBtn:active{ transform:scale(0.98); }
+        .container {
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(8px);
+            padding:12px;
+            border-radius:16px;
+            box-shadow:0 8px 30px rgba(0,0,0,0.3);
         }
-        
-        .key {
-            display: inline-block;
-            padding: 5px 12px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 5px;
-            margin: 0 3px;
-            font-weight: bold;
-            border: 1px solid rgba(255, 255, 255, 0.3);
+
+        #canvasWrapper {
+            width:100%;
+            margin:0 auto;
+            display:flex;
+            align-items:center;
+            justify-content:center;
         }
-        
-        .info {
-            margin-top: 15px;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            font-size: 12px;
-            min-height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            color: rgba(255, 255, 255, 0.5);
+
+        canvas{
+            display:block;
+            width:100%;
+            height:auto;
+            border-radius:10px;
+            border:3px solid rgba(255,255,255,0.12);
+            background:#121224;
+            touch-action:none;
         }
-        
-        .share-section {
-            margin-top: 15px;
-            padding: 15px;
-            background: rgba(255, 215, 0, 0.2);
-            border-radius: 10px;
-            text-align: center;
+
+        .mobile-hint{
+            display:none;
+            margin-top:8px;
+            font-size:13px;
+            text-align:center;
+            opacity:0.95;
+            background: rgba(255,215,0,0.12);
+            color:#111;
+            padding:8px;
+            border-radius:8px;
         }
-        
-        .share-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 10px;
-            flex-wrap: wrap;
+
+        .compact {
+            display:flex;
+            gap:8px;
+            align-items:center;
+            justify-content:center;
+            margin-top:12px;
         }
-        
-        .share-btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+
+        .share-section{
+            margin-top:12px;
+            padding:10px;
+            border-radius:10px;
+            background: rgba(255,255,255,0.03);
+            display:flex;
+            flex-direction:column;
+            gap:8px;
+            align-items:center;
         }
-        
-        .share-btn:active {
-            transform: scale(0.95);
+
+        .lucky-numbers{
+            font-size:clamp(14px,3.5vw,18px);
+            color:#FFD700;
+            font-weight:700;
+            text-align:center;
         }
-        
-        .share-btn.kakao {
-            background: #FEE500;
-            color: #000;
+
+        .share-buttons{
+            display:flex;
+            gap:8px;
+            flex-wrap:wrap;
+            justify-content:center;
         }
-        
-        .share-btn.twitter {
-            background: #1DA1F2;
-            color: white;
+
+        .share-btn{
+            padding:8px 12px;
+            border-radius:8px;
+            border:none;
+            cursor:pointer;
+            font-weight:700;
         }
-        
-        .share-btn.facebook {
-            background: #1877F2;
-            color: white;
+
+        .share-btn.kakao{ background:#FEE500; color:#000; }
+        .share-btn.twitter{ background:#1DA1F2; color:#fff; }
+        .share-btn.facebook{ background:#1877F2; color:#fff; }
+        .share-btn.copy{ background:rgba(255,255,255,0.12); color:#fff; }
+
+        .info{
+            margin-top:12px;
+            padding:10px;
+            border-radius:10px;
+            background: rgba(0,0,0,0.12);
+            color:rgba(255,255,255,0.75);
+            font-size:13px;
+            text-align:center;
         }
-        
-        .share-btn.copy {
-            background: rgba(255, 255, 255, 0.3);
-            color: white;
-        }
-        
-        .lucky-numbers {
-            margin-top: 10px;
-            font-weight: bold;
-            color: #FFD700;
-        }
-        
-        .donation {
-            margin-top: 15px;
-            padding: 10px;
-            text-align: center;
-            color: rgba(255, 255, 255, 0.8);
-            line-height: 1.6;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-        }
-        
-        .donation-account {
-            margin-top: 5px;
-            color: rgba(255, 215, 0, 0.9);
-            font-family: monospace;
-            font-weight: bold;
+
+        /* 모바일에서 캔버스 최대화 & 광고/링크 축소 */
+        @media (max-width:768px){
+            body{ padding:6px; }
+            .app{ padding:4px; }
+            .info{ display:none; } /* 광고 영역 숨김 */
+            .donation{ display:none; }
+            .mobile-hint{ display:block; }
+            .share-section{ padding:8px; font-size:13px; }
+            h1{ font-size:18px; }
+            #volumeBtn{ padding:8px; font-size:13px; }
+            /* 캔버스가 화면에서 크게 보이도록 여백 최소화 */
+            .container{ padding:8px; border-radius:10px; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="mobile-header">
+    <div class="app">
+        <div class="header">
             <h1>🎮 행운수집기</h1>
-        </div>
-        
-        <div class="instructions">
-            "행운은 예고없이 찾아온다. 그게 바로 나야"
-        </div>
-        
-        <div id="canvasContainer">
-            <canvas id="gameCanvas" width="600" height="400"></canvas>
-        </div>
-        
-        <div class="controls">
-            <div>
-                <span class="key">↑</span>
-                <span class="key">↓</span>
-                <span class="key">←</span>
-                <span class="key">→</span>
-                로 이동
-            </div>
-            <div style="margin-top: 10px;">
-                <span class="key">R</span> 리셋
+            <div class="controls-top">
+                <button id="volumeBtn" aria-pressed="false">🔊 볼륨 ON</button>
             </div>
         </div>
-        
-        <div class="info">
-            <div style="font-size: 12px;">
-                📢 광고 영역<br>
-                (Google AdSense 코드 삽입)
+
+        <div class="container">
+            <div id="canvasWrapper">
+                <!-- 캔버스의 width/height 속성은 초기 논리 해상도 -->
+                <canvas id="gameCanvas" width="600" height="400"></canvas>
             </div>
-        </div>
-        
-        <div class="mobile-bottom">
-            <div class="share-section">
-                <div style="font-weight: bold;">🎯 내 행운 번호 공유하기</div>
+
+            <div class="mobile-hint">📱 화면을 터치하면 우산이 그곳으로 이동해요!</div>
+
+            <div class="share-section" id="shareSection">
                 <div class="lucky-numbers" id="luckyNumbers">번호 6개를 모두 모아주세요!</div>
                 <div class="share-buttons">
-                    <button class="share-btn kakao" onclick="shareKakao()">💬 카카오톡</button>
-                    <button class="share-btn twitter" onclick="shareTwitter()">🐦 트위터</button>
-                    <button class="share-btn facebook" onclick="shareFacebook()">📘 페이스북</button>
-                    <button class="share-btn copy" onclick="copyLink()">🔗 복사</button>
+                    <button class="share-btn kakao" onclick="shareGeneric('kakao')">💬 카카오톡</button>
+                    <button class="share-btn twitter" onclick="shareGeneric('twitter')">🐦 트위터</button>
+                    <button class="share-btn facebook" onclick="shareGeneric('facebook')">📘 페이스북</button>
+                    <button class="share-btn copy" onclick="generateAndCopyShareLink()">🔗 링크 생성 및 복사</button>
                 </div>
+                <div style="font-size:12px; color:rgba(255,255,255,0.6); margin-top:6px;">(공유 링크를 열면 동일한 번호가 자동으로 표시됩니다.)</div>
             </div>
-            
-            <div class="donation">
-                이 게임이 행운을 가져다줬다면 개발자에게 커피 한 잔 사주시겠어요?
-                <div class="donation-account">🏦 카카오뱅크: 3333-17-9705885</div>
+
+            <div class="info" id="adInfo">
+                📢 광고 영역 — 모바일에서는 축소/숨김 처리됩니다.
             </div>
         </div>
     </div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        let canvasScale = 1;
-        
-        function resizeCanvas() {
-            const container = document.getElementById('canvasContainer');
-            const isMobile = window.innerWidth <= 768;
-            
-            if (isMobile) {
-                const vw = window.innerWidth;
-                const vh = window.innerHeight;
-                
-                // 모바일: 화면 크기에 맞춤
-                const maxHeight = vh * 0.8;
-                const aspectHeight = vw * 0.75;
-                const finalHeight = Math.min(maxHeight, aspectHeight);
-                
-                canvas.style.width = vw + 'px';
-                canvas.style.height = finalHeight + 'px';
-                
-                canvasScale = vw / 600;
-            } else {
-                // PC: 고정 크기
-                canvas.style.width = '600px';
-                canvas.style.height = '400px';
-                canvasScale = 1;
+    // ------------- 전역 설정 (볼륨 30% 감소 적용) -------------
+    let globalVolume = 0.7; // "30% 줄여줘" => 원래 1.0 대비 0.7
+    let muted = false;
+
+    const volumeBtn = document.getElementById('volumeBtn');
+    volumeBtn.addEventListener('click', () => {
+        muted = !muted;
+        volumeBtn.textContent = muted ? '🔇 볼륨 OFF' : '🔊 볼륨 ON';
+        volumeBtn.setAttribute('aria-pressed', muted ? 'true':'false');
+    });
+
+    // ------------- 캔버스 & 사이즈 최적화 -------------
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas(){
+        const wrapper = document.getElementById('canvasWrapper');
+        const maxWidth = wrapper.clientWidth;
+        const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+
+        // 기본 종횡비 (height / width)
+        const aspect = 400 / 600;
+
+        // 모바일에서 가능한 높이를 최대 활용 (헤더/패딩 고려)
+        const smallScreen = vw <= 768;
+        let desiredWidth = maxWidth;
+        let desiredHeight = Math.round(desiredWidth * aspect);
+
+        if (smallScreen) {
+            // 화면 세로 중 캔버스에 할당할 최대 높이: 전체 창 높이에서 약간의 UI(헤더/버튼) 공간을 뺀 값
+            const reserved = 180; // header + 기타 UI 여유
+            const availHeight = Math.max(120, window.innerHeight - reserved);
+            // 원하는 높이는 availHeight를 넘지 않도록
+            if (availHeight < desiredHeight) {
+                desiredHeight = availHeight;
+                desiredWidth = Math.round(desiredHeight / aspect);
             }
         }
-        
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-        window.addEventListener('orientationchange', () => {
-            setTimeout(resizeCanvas, 100);
-        });
-        
-        const usedNumbers = new Set();
-        
-        const player = {
-            x: 300,
-            y: 200,
-            width: 60,
-            height: 45,
-            speed: 7,
-            hookX: 0,
-            hookY: 0,
-            hookRadius: 25,
-            heldBall: null,
-            caughtBalls: [],
-            maxBalls: 6
-        };
-        
-        const slots = [];
-        const slotStartX = 30;
-        const slotStartY = 30;
-        const slotSize = 13;
-        const slotSpacing = 32.5;
-        
-        for (let i = 0; i < 6; i++) {
+
+        // style 크기(보이는 크기)
+        canvas.style.width = desiredWidth + 'px';
+        canvas.style.height = desiredHeight + 'px';
+
+        // 논리 캔버스 해상도를 보이는 크기와 같게 설정하여 물리 좌표 계산이 일관되게 동작하도록 함
+        canvas.width = desiredWidth;
+        canvas.height = desiredHeight;
+
+        // 슬롯 등 화면 요소 재계산
+        rebuildSlots();
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // ------------- 게임 데이터 (slots는 resize에서 재생성) -------------
+    const usedNumbers = new Set();
+    const player = {
+        x: 300, y: 200, width: 60, height: 45, speed: 5,
+        hookX: 0, hookY: 0, hookRadius: 25, heldBall: null, caughtBalls: [], maxBalls: 6
+    };
+    let slots = [];
+    let slotSize = 13;
+
+    function rebuildSlots(){
+        slots = [];
+        slotSize = Math.max(10, Math.round(canvas.width * 0.02));
+        const slotStartX = Math.round(canvas.width * 0.05);
+        const slotStartY = Math.round(canvas.height * 0.06);
+        const slotSpacing = Math.round((canvas.width - slotStartX*2) / 6);
+        for (let i=0;i<6;i++){
             slots.push({
-                x: slotStartX + (i * slotSpacing),
+                x: slotStartX + i * slotSpacing + Math.round(slotSpacing/2),
                 y: slotStartY,
                 radius: slotSize + 5,
-                filled: false
+                filled:false
             });
         }
-        
-        const balls = [];
-        const ballRadius = 10;
-        const gravity = 0.5;
-        const bounce = 0.6;
-        
-        let isSpawning = true;
-        let cooldownTimer = 0;
-        
-        const debris = [];
-        
-        const bombZone = {
-            x: canvas.width - 70,
-            y: 10,
-            size: 60,
-            pulseSize: 0,
-            pulseDirection: 1
-        };
-        
-        const keys = {};
-        let touchTarget = null;
-        
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        let audioStarted = false;
-        let bgmPlaying = false;
-        
-        const melodies = [
-            {
-                notes: [523.25, 659.25, 587.33, 783.99],
-                pattern: [0, 1, 2, 3, 0, 1, 2, 3, 1, 3, 0, 2],
-                tempo: 250,
-                name: "멜로디 1"
-            },
-            {
-                notes: [523.25, 587.33, 659.25, 698.46, 783.99, 880.00],
-                pattern: [0, 2, 4, 5, 4, 2, 0, 2, 4, 5, 4, 2, 1, 3, 5, 4],
-                tempo: 200,
-                name: "사다리타기"
-            },
-            {
-                notes: [659.25, 622.25, 659.25, 622.25, 659.25, 493.88, 587.33, 523.25, 440.00],
-                pattern: [0, 1, 0, 1, 0, 5, 6, 7, 8, 0, 1, 7, 5, 0, 1, 0, 1, 0],
-                tempo: 250,
-                name: "엘리제를 위하여"
-            },
-            {
-                notes: [523.25, 587.33, 659.25, 698.46, 783.99, 880.00],
-                pattern: [0, 4, 5, 4, 2, 4, 5, 4, 1, 4, 5, 4, 3, 4, 5, 4],
-                tempo: 250,
-                name: "캐논"
-            },
-            {
-                notes: [523.25, 523.25, 783.99, 783.99, 880.00, 880.00, 783.99],
-                pattern: [0, 1, 2, 3, 4, 5, 6, 2, 3, 4, 5, 6],
-                tempo: 300,
-                name: "작은 별"
-            },
-            {
-                notes: [659.25, 698.46, 783.99, 880.00, 987.77],
-                pattern: [0, 0, 1, 2, 2, 1, 0, 3, 3, 3, 0, 0, 1, 2, 2, 1],
-                tempo: 250,
-                name: "환희의 송가"
-            },
-            {
-                notes: [587.33, 659.25, 698.46, 783.99, 880.00],
-                pattern: [0, 1, 2, 1, 0, 3, 2, 1, 0, 1, 2, 3, 4, 3, 2, 1],
-                tempo: 250,
-                name: "미뉴엣"
-            },
-            {
-                notes: [523.25, 587.33, 659.25, 523.25],
-                pattern: [0, 1, 2, 2, 1, 0, 0, 1, 2, 2, 1, 0, 2, 3, 3, 2],
-                tempo: 280,
-                name: "종달새"
-            }
-        ];
-        
-        function startBGM() {
-            if (bgmPlaying) return;
-            bgmPlaying = true;
-            
-            const melody = melodies[Math.floor(Math.random() * melodies.length)];
-            let noteIndex = 0;
-            const startTime = Date.now();
-            
-            console.log('🎵 Now playing:', melody.name);
-            
-            function playNote() {
-                if (!bgmPlaying) return;
-                
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.frequency.value = melody.notes[melody.pattern[noteIndex % melody.pattern.length]];
-                oscillator.type = 'square';
-                
-                gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-                
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 0.2);
-                
-                noteIndex++;
-                
-                const elapsed = Date.now() - startTime;
-                if (elapsed >= 15000) {
-                    bgmPlaying = false;
-                    setTimeout(startBGM, 100);
-                    return;
-                }
-                
-                setTimeout(playNote, melody.tempo);
-            }
-            
-            playNote();
+
+        // 만약 공유 URL로 번호가 들어왔을 경우, applySharedNumbers에서 슬롯을 채움.
+        // 슬롯 위치는 이제 준비되었으니 caughtBalls의 slotIndex를 갱신
+        for (let i=0;i<player.caughtBalls.length;i++){
+            player.caughtBalls[i].slotIndex = i;
+            player.caughtBalls[i].inSlot = true;
+            slots[i].filled = true;
         }
-        
-        function startAudio() {
-            if (!audioStarted) {
-                audioContext.resume();
-                audioStarted = true;
-                startBGM();
-            }
-        }
-        
-        function playGrabSound() {
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.1);
-        }
-        
-        function playSlotSound() {
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            oscillator.frequency.value = 1200;
-            oscillator.type = 'square';
-            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.15);
-        }
-        
-        function playExplodeSound() {
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.5);
-            oscillator.type = 'sawtooth';
-            gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.5);
-        }
-        
-        function randomColor() {
-            const hue = Math.random() * 360;
-            return `hsl(${hue}, 70%, 60%)`;
-        }
-        
-        function getUniqueNumber() {
-            if (usedNumbers.size >= 45) {
-                return null;
-            }
-            
-            let num;
-            do {
-                num = Math.floor(Math.random() * 45) + 1;
-            } while (usedNumbers.has(num));
-            
-            usedNumbers.add(num);
-            return num;
-        }
-        
-        function createBall() {
-            const isNumberBall = Math.random() < 0.5;
-            let ballNumber = null;
-            
-            if (isNumberBall) {
-                ballNumber = getUniqueNumber();
-                if (ballNumber === null) {
-                    return;
-                }
-            }
-            
-            balls.push({
-                x: Math.random() * (canvas.width - ballRadius * 2) + ballRadius,
-                y: -ballRadius,
-                vx: (Math.random() - 0.5) * 3,
-                vy: 0,
-                radius: ballRadius,
-                color: randomColor(),
-                onGround: false,
-                number: ballNumber,
-                isNumberBall: ballNumber !== null
-            });
-        }
-        
-        setInterval(() => {
-            if (isSpawning) {
-                const activeBalls = balls.filter(b => !b.inSlot).length;
-                if (activeBalls < 200) {
-                    createBall();
-                }
-            }
-        }, 60);
-        
-        document.addEventListener('keydown', (e) => {
-            keys[e.key] = true;
-            if (e.key === 'r' || e.key === 'R') {
-                player.x = 300;
-                player.y = 200;
-            }
-        });
-        
-        document.addEventListener('keyup', (e) => {
-            keys[e.key] = false;
-        });
-        
-        function getCanvasCoordinates(e) {
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            
-            let clientX, clientY;
-            
-            if (e.touches) {
-                clientX = e.touches[0].clientX;
-                clientY = e.touches[0].clientY;
-            } else {
-                clientX = e.clientX;
-                clientY = e.clientY;
-            }
-            
-            return {
-                x: (clientX - rect.left) * scaleX,
-                y: (clientY - rect.top) * scaleY
-            };
-        }
-        
-        canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            startAudio();
-            const coords = getCanvasCoordinates(e);
-            player.x = coords.x - player.width / 2;
-            player.y = coords.y - player.height / 2;
-            touchTarget = coords;
-        });
-        
-        canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const coords = getCanvasCoordinates(e);
-            player.x = coords.x - player.width / 2;
-            player.y = coords.y - player.height / 2;
-            touchTarget = coords;
-        });
-        
-        canvas.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            touchTarget = null;
-        });
-        
-        canvas.addEventListener('mousedown', (e) => {
-            startAudio();
-            touchTarget = getCanvasCoordinates(e);
-        });
-        
-        canvas.addEventListener('mousemove', (e) => {
-            if (e.buttons === 1) {
-                touchTarget = getCanvasCoordinates(e);
-            }
-        });
-        
-        canvas.addEventListener('mouseup', () => {
-            touchTarget = null;
-        });
-        
-        function explodeAllBalls(isNuclear = false) {
-            playExplodeSound();
-            
-            balls.forEach(ball => {
-                if (!isNuclear && ball.inSlot) return;
-                
-                for (let i = 0; i < 8; i++) {
-                    const angle = (Math.PI * 2 * i) / 8;
-                    debris.push({
-                        x: ball.inSlot ? slots[ball.slotIndex].x : ball.x,
-                        y: ball.inSlot ? slots[ball.slotIndex].y : ball.y,
-                        vx: Math.cos(angle) * (Math.random() * 3 + 2),
-                        vy: Math.sin(angle) * (Math.random() * 3 + 2) - 5,
-                        size: Math.random() * 4 + 2,
-                        color: ball.color,
-                        life: 60,
-                        alpha: 1
-                    });
-                }
-            });
-            
-            if (isNuclear) {
-                balls.length = 0;
-                player.caughtBalls.length = 0;
-                player.heldBall = null;
-                slots.forEach(slot => slot.filled = false);
-                usedNumbers.clear();
-            } else {
-                for (let i = balls.length - 1; i >= 0; i--) {
-                    if (!balls[i].inSlot) {
-                        if (balls[i].isNumberBall && balls[i].number) {
-                            usedNumbers.delete(balls[i].number);
-                        }
-                        balls.splice(i, 1);
-                    }
-                }
-                player.heldBall = null;
-            }
-            
-            isSpawning = false;
-            cooldownTimer = 300;
-        }
-        
-        function checkBombZone() {
-            const px = player.x + player.width / 2;
-            const py = player.y + player.height / 2;
-            const bx = bombZone.x + bombZone.size / 2;
-            const by = bombZone.y + bombZone.size / 2 + 5;
-            const distance = Math.sqrt((px - bx) ** 2 + (py - by) ** 2);
-            
-            if (distance < bombZone.size / 2 + player.width / 2) {
-                explodeAllBalls(true);
-            }
-        }
-        
-        function update() {
-            if (touchTarget) {
-                const dx = touchTarget.x - (player.x + player.width / 2);
-                const dy = touchTarget.y - (player.y + player.height / 2);
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                if (distance > player.speed) {
-                    player.x += (dx / distance) * player.speed;
-                    player.y += (dy / distance) * player.speed;
-                }
-            } else {
-                if (keys['ArrowUp']) player.y -= player.speed;
-                if (keys['ArrowDown']) player.y += player.speed;
-                if (keys['ArrowLeft']) player.x -= player.speed;
-                if (keys['ArrowRight']) player.x += player.speed;
-            }
-            
-            if (player.x < -10) player.x = -10;
-            if (player.y < 0) player.y = 0;
-            if (player.x + player.width > canvas.width) {
-                player.x = canvas.width - player.width;
-            }
-            if (player.y + player.height > canvas.height) {
-                player.y = canvas.height - player.height;
-            }
-            
-            player.hookX = player.x + player.width / 2 + 10;
-            player.hookY = player.y + player.height + 1;
-            
-            for (let i = balls.length - 1; i >= 0; i--) {
-                const ball = balls[i];
-                
-                if (ball.inSlot) continue;
-                
-                if (player.heldBall === ball) {
-                    ball.x = player.hookX;
-                    ball.y = player.hookY;
-                    ball.vx = 0;
-                    ball.vy = 0;
-                    ball.onGround = false;
-                    
-                    for (let s = 0; s < slots.length; s++) {
-                        const slot = slots[s];
-                        const dist = Math.sqrt((ball.x - slot.x) ** 2 + (ball.y - slot.y) ** 2);
-                        
-                        if (dist < slot.radius && player.caughtBalls.length < player.maxBalls) {
-                            const emptySlotIndex = player.caughtBalls.length;
-                            if (emptySlotIndex < 6) {
-                                ball.inSlot = true;
-                                ball.slotIndex = emptySlotIndex;
-                                player.caughtBalls.push(ball);
-                                player.heldBall = null;
-                                slots[emptySlotIndex].filled = true;
-                                playSlotSound();
-                                
-                                if (player.caughtBalls.length === 6) {
-                                    updateLuckyNumbers();
-                                }
-                                
-                                break;
-                            }
-                        }
-                    }
-                    
-                    continue;
-                }
-                
-                if (!ball.onGround) {
-                    ball.vy += gravity;
-                    ball.x += ball.vx;
-                    ball.y += ball.vy;
-                    
-                    if (ball.y + ball.radius >= canvas.height) {
-                        ball.y = canvas.height - ball.radius;
-                        ball.vy *= -bounce;
-                        ball.vx *= 0.95;
-                        
-                        if (Math.abs(ball.vy) < 1) {
-                            ball.onGround = true;
-                            ball.vy = 0;
-                        }
-                    }
-                    
-                    if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) {
-                        ball.vx *= -1;
-                        ball.x = ball.x < canvas.width / 2 ? ball.radius : canvas.width - ball.radius;
-                    }
-                }
-                
-                const hookDist = Math.sqrt((ball.x - player.hookX) ** 2 + (ball.y - player.hookY) ** 2);
-                if (hookDist < ball.radius + player.hookRadius && !player.heldBall && ball.isNumberBall && ball.onGround) {
-                    player.heldBall = ball;
-                    playGrabSound();
-                }
-                
-                const umbrellaTop = player.y;
-                const umbrellaBottom = player.y + 35;
-                const umbrellaLeft = player.x + 5;
-                const umbrellaRight = player.x + player.width - 5;
-                
-                if (ball.y - ball.radius < umbrellaBottom && 
-                    ball.y + ball.radius > umbrellaTop &&
-                    ball.x + ball.radius > umbrellaLeft && 
-                    ball.x - ball.radius < umbrellaRight &&
-                    player.heldBall !== ball) {
-                    
-                    const bounceAngle = ((ball.x - player.x) / player.width - 0.5) * Math.PI * 0.8;
-                    ball.vx = Math.sin(bounceAngle) * 20;
-                    ball.vy = -Math.abs(Math.cos(bounceAngle)) * 20;
-                    ball.color = randomColor();
-                    ball.onGround = false;
-                    ball.y = umbrellaBottom + ball.radius;
-                }
-            }
-            
-            for (let i = 0; i < balls.length; i++) {
-                for (let j = i + 1; j < balls.length; j++) {
-                    const ball1 = balls[i];
-                    const ball2 = balls[j];
-                    
-                    const dx = ball2.x - ball1.x;
-                    const dy = ball2.y - ball1.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    const minDist = ball1.radius + ball2.radius;
-                    
-                    if (distance < minDist) {
-                        const angle = Math.atan2(dy, dx);
-                        const sin = Math.sin(angle);
-                        const cos = Math.cos(angle);
-                        
-                        const overlap = minDist - distance;
-                        const moveX = (overlap / 2) * cos;
-                        const moveY = (overlap / 2) * sin;
-                        
-                        ball1.x -= moveX;
-                        ball1.y -= moveY;
-                        ball2.x += moveX;
-                        ball2.y += moveY;
-                        
-                        const vx1 = ball1.vx * cos + ball1.vy * sin;
-                        const vy1 = ball1.vy * cos - ball1.vx * sin;
-                        const vx2 = ball2.vx * cos + ball2.vy * sin;
-                        const vy2 = ball2.vy * cos - ball2.vx * sin;
-                        
-                        ball1.vx = vx2 * cos - vy1 * sin;
-                        ball1.vy = vy1 * cos + vx2 * sin;
-                        ball2.vx = vx1 * cos - vy2 * sin;
-                        ball2.vy = vy2 * cos + vx1 * sin;
-                        
-                        if (Math.abs(ball1.vy) > 0.5) ball1.onGround = false;
-                        if (Math.abs(ball2.vy) > 0.5) ball2.onGround = false;
-                    }
-                }
-            }
-            
-            for (let i = debris.length - 1; i >= 0; i--) {
-                const d = debris[i];
-                d.vy += gravity * 0.3;
-                d.x += d.vx;
-                d.y += d.vy;
-                d.life--;
-                d.alpha = d.life / 60;
-                
-                if (d.life <= 0 || d.y > canvas.height) {
-                    debris.splice(i, 1);
-                }
-            }
-            
-            const activeBalls = balls.filter(b => !b.inSlot);
-            const screenArea = canvas.width * canvas.height;
-            const ballsArea = activeBalls.length * Math.PI * ballRadius * ballRadius;
-            const fillRatio = ballsArea / screenArea;
-            
-            if (fillRatio > 0.70) {
-                explodeAllBalls();
-            }
-            
-            if (cooldownTimer > 0) {
-                cooldownTimer--;
-                if (cooldownTimer === 0) {
-                    isSpawning = true;
-                }
-            }
-            
-            checkBombZone();
-            
-            bombZone.pulseSize += bombZone.pulseDirection * 0.5;
-            if (bombZone.pulseSize > 10 || bombZone.pulseSize < 0) {
-                bombZone.pulseDirection *= -1;
-            }
-        }
-        
-        function render() {
-            ctx.fillStyle = 'rgba(26, 26, 46, 0.15)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-            ctx.lineWidth = 1;
-            for (let i = 0; i < canvas.width; i += 50) {
-                ctx.beginPath();
-                ctx.moveTo(i, 0);
-                ctx.lineTo(i, canvas.height);
-                ctx.stroke();
-            }
-            for (let i = 0; i < canvas.height; i += 50) {
-                ctx.beginPath();
-                ctx.moveTo(0, i);
-                ctx.lineTo(canvas.width, i);
-                ctx.stroke();
-            }
-            
-            const centerX = player.x + player.width / 2;
-            const topY = player.y;
-            const umbrellaRadius = player.width / 2;
-            
-            const colors = ['#FF6B6B', '#FFA07A', '#FFD93D', '#6BCB77', '#4D96FF', '#9D84B7', '#FF8AAE', '#FFB347'];
-            for (let i = 0; i < 8; i++) {
-                const startAngle = Math.PI + (Math.PI * i) / 8;
-                const endAngle = Math.PI + (Math.PI * (i + 1)) / 8;
-                
-                ctx.fillStyle = colors[i];
-                ctx.beginPath();
-                ctx.moveTo(centerX, topY);
-                ctx.arc(centerX, topY, umbrellaRadius, startAngle, endAngle);
-                ctx.closePath();
-                ctx.fill();
-            }
-            
-            ctx.strokeStyle = '#2c3e50';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(centerX, topY, umbrellaRadius, Math.PI, 0, false);
-            ctx.stroke();
-            
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
-            ctx.lineWidth = 1;
-            for (let i = 1; i < 8; i++) {
-                const angle = Math.PI + (Math.PI * i) / 8;
-                const x = centerX + Math.cos(angle) * umbrellaRadius;
-                const y = topY + Math.sin(angle) * umbrellaRadius;
-                ctx.beginPath();
-                ctx.moveTo(centerX, topY);
-                ctx.lineTo(x, y);
-                ctx.stroke();
-            }
-            
-            ctx.strokeStyle = '#6B4423';
-            ctx.lineWidth = 5;
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(centerX, topY);
-            ctx.lineTo(centerX, player.y + player.height);
-            ctx.stroke();
-            
-            const hookStartY = player.y + player.height;
-            ctx.strokeStyle = '#6B4423';
-            ctx.lineWidth = 5;
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(centerX, hookStartY);
-            ctx.lineTo(centerX, hookStartY + 5);
-            ctx.lineTo(centerX + 18, hookStartY + 5);
-            ctx.lineTo(centerX + 18, hookStartY - 5);
-            ctx.stroke();
-            
-            for (let i = 0; i < 6; i++) {
-                const slotX = slots[i].x;
-                const slotY = slots[i].y;
-                
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.arc(slotX, slotY, slotSize, 0, Math.PI * 2);
-                ctx.stroke();
-                
-                if (i < player.caughtBalls.length) {
-                    const slotBall = player.caughtBalls[i];
-                    ctx.fillStyle = slotBall.color;
-                    ctx.beginPath();
-                    ctx.arc(slotX, slotY, slotSize - 2, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    ctx.fillStyle = 'white';
-                    ctx.font = 'bold 10px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.strokeStyle = '#000';
-                    ctx.lineWidth = 2;
-                    ctx.strokeText(slotBall.number, slotX, slotY);
-                    ctx.fillText(slotBall.number, slotX, slotY);
-                }
-            }
-            
-            balls.forEach(ball => {
-                if (ball.inSlot) return;
-                
-                if (player.heldBall !== ball) {
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-                    ctx.beginPath();
-                    ctx.arc(ball.x + 3, ball.y + 3, ball.radius, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                
-                ctx.fillStyle = ball.color;
-                ctx.beginPath();
-                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-                ctx.fill();
-                
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-                ctx.beginPath();
-                ctx.arc(ball.x - ball.radius * 0.3, ball.y - ball.radius * 0.3, ball.radius * 0.4, 0, Math.PI * 2);
-                ctx.fill();
-                
-                if (ball.isNumberBall) {
-                    ctx.fillStyle = 'white';
-                    ctx.font = 'bold 10px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.strokeStyle = '#000';
-                    ctx.lineWidth = 2;
-                    ctx.strokeText(ball.number, ball.x, ball.y);
-                    ctx.fillText(ball.number, ball.x, ball.y);
-                }
-            });
-            
-            debris.forEach(d => {
-                ctx.globalAlpha = d.alpha;
-                ctx.fillStyle = d.color;
-                ctx.beginPath();
-                ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-            ctx.globalAlpha = 1;
-            
-            const bx = bombZone.x + bombZone.size / 2;
-            const by = bombZone.y + bombZone.size / 2;
-            
-            ctx.fillStyle = '#1a1a1a';
-            ctx.beginPath();
-            ctx.arc(bx, by + 5, 25, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-            
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 4;
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(bx, by - 20);
-            ctx.lineTo(bx - 5, by - 32);
-            ctx.stroke();
-            
-            ctx.fillStyle = '#ff4400';
-            ctx.beginPath();
-            ctx.arc(bx - 5, by - 32, 6, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.fillStyle = '#ffaa00';
-            ctx.beginPath();
-            ctx.arc(bx - 5, by - 32, 3, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.fillStyle = '#FFD700';
-            ctx.beginPath();
-            ctx.arc(bx, by + 5, 22, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-            
-            ctx.fillStyle = '#000';
-            ctx.beginPath();
-            ctx.arc(bx, by + 5, 6, 0, Math.PI * 2);
-            ctx.fill();
-            
-            ctx.fillStyle = '#000';
-            for (let i = 0; i < 3; i++) {
-                const angle = (Math.PI * 2 / 3) * i - Math.PI / 2;
-                ctx.save();
-                ctx.translate(bx, by + 5);
-                ctx.rotate(angle);
-                
-                ctx.beginPath();
-                ctx.moveTo(0, -6);
-                ctx.lineTo(-7, -16);
-                ctx.arc(0, -16, 7, Math.PI, 0, false);
-                ctx.lineTo(7, -16);
-                ctx.closePath();
-                ctx.fill();
-                
-                ctx.restore();
-            }
-            
-            ctx.strokeStyle = `rgba(255, 50, 50, ${0.5 - bombZone.pulseSize / 30})`;
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.arc(bx, by + 5, 30 + bombZone.pulseSize, 0, Math.PI * 2);
-            ctx.stroke();
-            
-            if (cooldownTimer > 0) {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                ctx.font = 'bold 40px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(`${Math.ceil(cooldownTimer / 60)}`, canvas.width / 2, canvas.height / 2);
-                ctx.font = '20px Arial';
-                ctx.fillText('초 후 재시작...', canvas.width / 2, canvas.height / 2 + 40);
-            }
-        }
-        
-        function updateLuckyNumbers() {
-            const numbers = player.caughtBalls.map(ball => ball.number).join(', ');
-            document.getElementById('luckyNumbers').textContent = numbers;
-        }
-        
-        function shareKakao() {
-            if (player.caughtBalls.length < 6) {
-                alert('6개의 번호를 모두 모아주세요!');
-                return;
-            }
-            
-            const numbers = player.caughtBalls.map(ball => ball.number).join(', ');
-            const text = `🍀 행운수집기로 뽑은 내 행운 번호!\n${numbers}\n\n당신도 행운을 만들어보세요!`;
-            
-            if (navigator.share) {
-                navigator.share({
-                    title: '🎮 행운수집기',
-                    text: text,
-                    url: window.location.href
-                }).catch(() => {
-                    copyToClipboard(text + '\n' + window.location.href);
-                });
-            } else {
-                copyToClipboard(text + '\n' + window.location.href);
-            }
-        }
-        
-        function shareTwitter() {
-            if (player.caughtBalls.length < 6) {
-                alert('6개의 번호를 모두 모아주세요!');
-                return;
-            }
-            
-            const numbers = player.caughtBalls.map(ball => ball.number).join(', ');
-            const text = `🍀 행운수집기로 뽑은 내 행운 번호!\n${numbers}\n당신도 행운을 만들어보세요!`;
-            const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(window.location.href)}`;
-            window.open(url, '_blank');
-        }
-        
-        function shareFacebook() {
-            if (player.caughtBalls.length < 6) {
-                alert('6개의 번호를 모두 모아주세요!');
-                return;
-            }
-            
-            const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`;
-            window.open(url, '_blank');
-        }
-        
-        function copyLink() {
-            if (player.caughtBalls.length < 6) {
-                alert('6개의 번호를 모두 모아주세요!');
-                return;
-            }
-            
-            const numbers = player.caughtBalls.map(ball => ball.number).join(', ');
-            const text = `🍀 행운수집기로 뽑은 내 행운 번호!\n${numbers}\n\n${window.location.href}`;
-            copyToClipboard(text);
-        }
-        
-        function copyToClipboard(text) {
-            if (navigator.clipboard) {
-                navigator.clipboard.writeText(text).then(() => {
-                    alert('✅ 복사되었습니다!\n친구들에게 공유해보세요!');
-                });
-            } else {
-                const textarea = document.createElement('textarea');
-                textarea.value = text;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                alert('✅ 복사되었습니다!\n친구들에게 공유해보세요!');
-            }
-        }
-        
-        function gameLoop() {
-            update();
-            render();
-            requestAnimationFrame(gameLoop);
-        }
-        
-        gameLoop();
-    </script>
-</body>
-</html>
+    }
+
+    // ------------- 공, 물리, 스폰 -------------
+    const balls = [];
+    const ballRadius = 10;
+    const gravity = 0.5;
+    const bounce = 0.6;
+    let isSpawning = true;
+    let cooldownTimer = 0;
+    const debris = [];
+    const bombZone = { x: 0, y: 10, size: 60, pulseSiz
