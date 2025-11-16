@@ -1,64 +1,41 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>행운수집기 - 로또 번호 추첨 게임</title>
-    <link rel="stylesheet" href="./css/style.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+    <title>행운수집기</title>
+    <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
-    <div class="container">
-        <div class="mobile-header">
-            <h1>🎮 행운수집기</h1>
-        </div>
-        
-        <div class="instructions">
-            "행운은 예고없이 찾아온다. 그게 바로 나야"
-        </div>
-        
-        <div id="canvasContainer">
-            <canvas id="gameCanvas" width="600" height="400"></canvas>
-        </div>
-        
-        <div class="controls">
-            <div>
-                <span class="key">↑</span>
-                <span class="key">↓</span>
-                <span class="key">←</span>
-                <span class="key">→</span>
-                로 이동
-            </div>
-            <div style="margin-top: 10px;">
-                <span class="key">R</span> 리셋
-            </div>
-        </div>
-        
-        <div class="info">
-            <div style="font-size: 12px;">
-                📢 광고 영역<br>
-                (Google AdSense 코드 삽입)
-            </div>
-        </div>
-        
-        <div class="mobile-bottom">
-            <div class="share-section">
-                <div style="font-weight: bold;">🎯 내 행운 번호 공유하기</div>
-                <div class="lucky-numbers" id="luckyNumbers">번호 6개를 모두 모아주세요!</div>
-                <div class="share-buttons">
-                    <button class="share-btn kakao" onclick="shareKakao()">💬 카카오톡</button>
-                    <button class="share-btn twitter" onclick="shareTwitter()">🐦 트위터(X)</button>
-                    <button class="share-btn facebook" onclick="shareFacebook()">📘 페이스북</button>
-                    <button class="share-btn copy" onclick="copyLink()">🔗 복사</button>
-                </div>
-            </div>
-            
-            <div class="donation">
-                이 게임이 행운을 가져다줬다면 개발자에게 커피 한 잔 사주시겠어요?
-                <div class="donation-account">🏦 카카오뱅크: 3333-17-9705885</div>
-            </div>
+
+    <!-- 상단 제목 -->
+    <header id="headerTitle">행운수집기 🎲</header>
+
+    <!-- 메인 게임 캔버스 -->
+    <div id="gameWrapper">
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+    </div>
+
+    <!-- 뽑힌 번호 표시 -->
+    <div id="luckyNumbers"></div>
+
+    <!-- 공유 버튼 (6개 모이면 등장) -->
+    <div id="shareButtons">
+        <button onclick="shareKakao()">카카오로 공유</button>
+        <button onclick="shareTwitter()">트위터</button>
+        <button onclick="copyLink()">링크 복사</button>
+    </div>
+
+    <!-- 광고 영역 -->
+    <div id="adArea">
+        <div class="ad-box">
+            광고 영역 (300×250)
         </div>
     </div>
 
-    <script src="./js/game.js" defer></script>
+    <script src="js/game.js"></script>
 </body>
 </html>

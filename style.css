@@ -1,0 +1,136 @@
+/* ===========================
+   기본 설정
+=========================== */
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background: #121212;
+    color: white;
+    text-align: center;
+    font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+    overflow-x: hidden;
+}
+
+/* ===========================
+   상단 타이틀
+=========================== */
+#headerTitle {
+    font-size: 20px;
+    padding: 12px 0;
+    background: #1f1f1f;
+    border-bottom: 1px solid #333;
+    font-weight: 600;
+}
+
+/* ===========================
+   게임 캔버스
+=========================== */
+#gameWrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-top: 4px;
+}
+
+#gameCanvas {
+    width: 100%;
+    max-width: 600px;
+    background: black;
+    border-radius: 10px;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+}
+
+/* ===========================
+   행운 번호 표시
+=========================== */
+#luckyNumbers {
+    margin-top: 12px;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+/* ===========================
+   공유 버튼 영역 (6개 모일 때만 표시)
+=========================== */
+#shareButtons {
+    display: none;
+    margin-top: 12px;
+    padding-bottom: 12px;
+}
+
+#shareButtons button {
+    width: 90%;
+    max-width: 320px;
+    padding: 12px;
+    margin: 6px auto;
+    font-size: 17px;
+    border: none;
+    border-radius: 10px;
+    color: white;
+    background: linear-gradient(135deg, #3d7bff, #365ed6);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#shareButtons button:active {
+    transform: scale(0.98);
+    background: #274fc2;
+}
+
+/* ===========================
+   하단 광고 영역
+=========================== */
+#adArea {
+    margin-top: 15px;
+    padding-bottom: 20px;
+}
+
+.ad-box {
+    width: 100%;
+    max-width: 320px;
+    height: 250px;
+    background: #1c1c1c;
+    border: 1px solid #444;
+    margin: 0 auto;
+    border-radius: 10px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    color: #aaa;
+    font-size: 15px;
+}
+
+/* ===========================
+   PC 전용 스타일 (더 깔끔)
+=========================== */
+@media (min-width: 769px) {
+
+    #headerTitle {
+        font-size: 22px;
+        padding: 16px 0;
+    }
+
+    #luckyNumbers {
+        font-size: 24px;
+        margin-top: 15px;
+    }
+
+    #shareButtons button {
+        font-size: 18px;
+        max-width: 300px;
+    }
+
+    .ad-box {
+        max-width: 336px; /* PC 광고 권장 사이즈 */
+        height: 280px;
+    }
+}

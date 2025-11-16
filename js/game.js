@@ -937,6 +937,10 @@ function updateLuckyNumbers() {
         .sort((a, b) => a - b)
         .join(', ');
     luckyNumbersEl.textContent = numbers;
+        // 번호 6개 완성 → 공유 버튼 표시
+    if (player.caughtBalls.length === 6) {
+        document.getElementById("shareButtons").style.display = "block";
+    }
 }
 
 function copyToClipboard(text) {
