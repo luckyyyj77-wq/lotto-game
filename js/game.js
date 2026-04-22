@@ -13,8 +13,8 @@ function resizeCanvas() {
     const vw = window.innerWidth;
 
     if (isMobile) {
-        // 헤더(44) + 번호표시(32) + 공유버튼(44) + sticky광고(58) + 여유(10) = 188px
-        const available = (window.innerHeight || screen.height) - 188;
+        // 상단광고(58) + 헤더(44) + 번호표시(32) + 공유버튼(44) + 하단광고(58) + 여유(10) = 246px
+        const available = (window.innerHeight || screen.height) - 246;
         const aspectH = Math.round(vw * (400 / 600)); // 3:2 비율 유지
         const finalH = Math.max(160, Math.min(aspectH, available));
 

@@ -8,13 +8,30 @@
 
 body {
     margin: 0;
-    padding: 0;
+    padding: 58px 0 0; /* 상단 고정 배너 높이만큼 밀어내기 */
     background: #121212;
     color: white;
     text-align: center;
     font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
-    overflow: hidden; /* 스크롤 완전 차단 */
+    overflow: hidden;
     height: 100dvh;
+}
+
+/* ===========================
+   상단 고정 배너 광고 (fixed top)
+=========================== */
+#topAdBar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: #0d0d0d;
+    border-bottom: 1px solid #2a2a2a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 58px;
+    z-index: 9999;
 }
 
 /* ===========================
@@ -179,6 +196,11 @@ body {
     body {
         overflow: auto;
         height: auto;
+        padding-top: 0;
+    }
+
+    #topAdBar {
+        display: none;
     }
 
     #headerTitle {
