@@ -7,19 +7,19 @@ const luckyNumbersEl = document.getElementById('luckyNumbers');
 
 let isMobile = window.innerWidth <= 768;
 
-// 캔버스 리사이즈 (PC / 모바일 대응)
+// 캔버스 리사이즈 (모바일 우선)
 function resizeCanvas() {
     isMobile = window.innerWidth <= 768;
+    const vw = window.innerWidth;
 
     if (isMobile) {
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
-        const maxHeight = vh * 0.8;
-        const aspectHeight = vw * 0.75;
-        const finalHeight = Math.min(maxHeight, aspectHeight);
+        // 헤더(42) + 번호표시(36) + sticky광고(58) + 여유(24) = 160px
+        const maxH = Math.max(180, window.innerHeight - 160);
+        const aspectH = Math.round(vw * (400 / 600)); // 캔버스 비율 3:2 유지
+        const finalH = Math.min(aspectH, maxH);
 
         canvas.style.width = vw + 'px';
-        canvas.style.height = finalHeight + 'px';
+        canvas.style.height = finalH + 'px';
     } else {
         canvas.style.width = '600px';
         canvas.style.height = '400px';
@@ -37,6 +37,7 @@ window.addEventListener('orientationchange', () => {
 // ==============================
 let audioCtx;
 let bgmStarted = false;
+let isMuted = localStorage.getItem('lotto_muted') === 'true';
 
 function initAudioContext() {
     if (!audioCtx) {
@@ -135,24 +136,26 @@ function startBGM() {
         if (!playing) return;
         initAudioContext();
 
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        if (!isMuted) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
 
-        osc.type = "square";
-        osc.frequency.value =
-            melody.notes[melody.pattern[noteIndex % melody.pattern.length]];
+            osc.type = "square";
+            osc.frequency.value =
+                melody.notes[melody.pattern[noteIndex % melody.pattern.length]];
 
-        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(
-            0.05,
-            audioCtx.currentTime + 0.25
-        );
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(
+                0.05,
+                audioCtx.currentTime + 0.25
+            );
 
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
 
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.3);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+        }
 
         noteIndex++;
 
@@ -172,6 +175,7 @@ function startBGM() {
 
 // 효과음
 function playGrabSound() {
+    if (isMuted) return;
     initAudioContext();
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -189,6 +193,7 @@ function playGrabSound() {
 }
 
 function playSlotSound() {
+    if (isMuted) return;
     initAudioContext();
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -206,6 +211,7 @@ function playSlotSound() {
 }
 
 function playExplodeSound() {
+    if (isMuted) return;
     initAudioContext();
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -225,6 +231,15 @@ function playExplodeSound() {
     osc.start(audioCtx.currentTime);
     osc.stop(audioCtx.currentTime + 0.5);
 }
+
+// 소리 온오프
+function toggleMute() {
+    isMuted = !isMuted;
+    localStorage.setItem('lotto_muted', isMuted);
+    const btn = document.getElementById('muteBtn');
+    if (btn) btn.textContent = isMuted ? '🔇' : '🔊';
+}
+window.toggleMute = toggleMute;
 
 // =====================
 // 3. 게임 상태 / 데이터
@@ -1051,5 +1066,11 @@ function gameLoop() {
     render();
     requestAnimationFrame(gameLoop);
 }
+
+// 뮤트 버튼 초기 상태 반영
+(function () {
+    const btn = document.getElementById('muteBtn');
+    if (btn) btn.textContent = isMuted ? '🔇' : '🔊';
+})();
 
 gameLoop();

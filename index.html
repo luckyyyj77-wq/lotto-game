@@ -4,15 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-
     <title>행운수집기</title>
     <link rel="stylesheet" href="style.css" />
+
+    <!--
+        Google AdSense 적용 방법:
+        1. https://adsense.google.com 에서 사이트 등록
+        2. 아래 주석 해제 후 ca-pub-XXXXXXXXXXXXXXXX 를 발급받은 게시자 ID로 교체
+    -->
+    <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script> -->
 </head>
 
 <body>
 
-    <!-- 상단 제목 -->
-    <header id="headerTitle">행운수집기 🎲</header>
+    <!-- 상단 제목 + 소리 버튼 -->
+    <header id="headerTitle">
+        행운수집기 🎲
+        <button id="muteBtn" onclick="toggleMute()" aria-label="소리 켜기/끄기">🔊</button>
+    </header>
 
     <!-- 메인 게임 캔버스 -->
     <div id="gameWrapper">
@@ -20,7 +29,7 @@
     </div>
 
     <!-- 뽑힌 번호 표시 -->
-    <div id="luckyNumbers"></div>
+    <div id="luckyNumbers">번호 6개를 모두 모아주세요!</div>
 
     <!-- 공유 버튼 (6개 모이면 등장) -->
     <div id="shareButtons">
@@ -29,11 +38,18 @@
         <button onclick="copyLink()">링크 복사</button>
     </div>
 
-    <!-- 광고 영역 -->
-    <div id="adArea">
-        <div class="ad-box">
-            광고 영역 (300×250)
-        </div>
+    <!-- 하단 고정 배너 (sticky ― 게임 내내 항시 노출) -->
+    <div id="stickyAdBar">
+        <!--
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+             data-ad-slot="XXXXXXXXXX"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+        -->
+        <div class="ad-banner-placeholder">광고 배너 (320×50)</div>
     </div>
 
     <script src="js/game.js"></script>
