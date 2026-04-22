@@ -7,16 +7,16 @@ const luckyNumbersEl = document.getElementById('luckyNumbers');
 
 let isMobile = window.innerWidth <= 768;
 
-// 캔버스 리사이즈 (모바일 우선)
+// 캔버스 리사이즈 — 모바일: 스크롤 없이 한 화면에 맞춤
 function resizeCanvas() {
     isMobile = window.innerWidth <= 768;
     const vw = window.innerWidth;
 
     if (isMobile) {
-        // 헤더(42) + 번호표시(36) + sticky광고(58) + 여유(24) = 160px
-        const maxH = Math.max(180, window.innerHeight - 160);
-        const aspectH = Math.round(vw * (400 / 600)); // 캔버스 비율 3:2 유지
-        const finalH = Math.min(aspectH, maxH);
+        // 헤더(44) + 번호표시(32) + 공유버튼(44) + sticky광고(58) + 여유(10) = 188px
+        const available = (window.innerHeight || screen.height) - 188;
+        const aspectH = Math.round(vw * (400 / 600)); // 3:2 비율 유지
+        const finalH = Math.max(160, Math.min(aspectH, available));
 
         canvas.style.width = vw + 'px';
         canvas.style.height = finalH + 'px';
@@ -233,11 +233,22 @@ function playExplodeSound() {
 }
 
 // 소리 온오프
+function updateMuteBtn() {
+    const btn = document.getElementById('muteBtn');
+    if (!btn) return;
+    if (isMuted) {
+        btn.textContent = '🔇 OFF';
+        btn.classList.add('muted');
+    } else {
+        btn.textContent = '🔊 ON';
+        btn.classList.remove('muted');
+    }
+}
+
 function toggleMute() {
     isMuted = !isMuted;
     localStorage.setItem('lotto_muted', isMuted);
-    const btn = document.getElementById('muteBtn');
-    if (btn) btn.textContent = isMuted ? '🔇' : '🔊';
+    updateMuteBtn();
 }
 window.toggleMute = toggleMute;
 
@@ -471,7 +482,8 @@ function explodeAllBalls(isNuclear = false) {
         player.heldBall = null;
         slots.forEach(slot => (slot.filled = false));
         usedNumbers.clear();
-        luckyNumbersEl.textContent = '번호 6개를 모두 모아주세요!';
+        luckyNumbersEl.textContent = '';
+        document.getElementById('shareButtons').classList.remove('visible');
     } else {
         for (let i = balls.length - 1; i >= 0; i--) {
             if (!balls[i].inSlot) {
@@ -952,9 +964,8 @@ function updateLuckyNumbers() {
         .sort((a, b) => a - b)
         .join(', ');
     luckyNumbersEl.textContent = numbers;
-        // 번호 6개 완성 → 공유 버튼 표시
     if (player.caughtBalls.length === 6) {
-        document.getElementById("shareButtons").style.display = "block";
+        document.getElementById('shareButtons').classList.add('visible');
     }
 }
 
@@ -1069,13 +1080,11 @@ function gameLoop() {
 
 // 뮤트 버튼 초기화 + 모바일 터치 직접 처리
 (function () {
+    updateMuteBtn();
     const btn = document.getElementById('muteBtn');
     if (!btn) return;
-    btn.textContent = isMuted ? '🔇' : '🔊';
-
-    // 모바일: touchend에서 직접 처리 (click 이벤트 지연·누락 방지)
     btn.addEventListener('touchend', function (e) {
-        e.preventDefault(); // 이후 click 이벤트 중복 발생 차단
+        e.preventDefault();
         toggleMute();
     }, { passive: false });
 })();

@@ -8,12 +8,13 @@
 
 body {
     margin: 0;
-    padding: 0 0 58px; /* 하단 sticky 광고 높이만큼 여백 */
+    padding: 0;
     background: #121212;
     color: white;
     text-align: center;
     font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
-    overflow-x: hidden;
+    overflow: hidden; /* 스크롤 완전 차단 */
+    height: 100dvh;
 }
 
 /* ===========================
@@ -21,51 +22,60 @@ body {
 =========================== */
 #headerTitle {
     position: relative;
-    font-size: 18px;
-    padding: 10px 48px;
+    font-size: 17px;
+    padding: 0 52px;
+    height: 44px;
+    line-height: 44px;
     background: #1f1f1f;
     border-bottom: 1px solid #333;
     font-weight: 600;
-    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 #muteBtn {
     position: absolute;
-    right: 10px;
+    right: 8px;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid #444;
-    border-radius: 8px;
+    background: #2a7aff;
+    border: none;
+    border-radius: 20px;
     color: white;
-    font-size: 20px;
-    width: 44px;
-    height: 44px;
-    padding: 0;
+    font-size: 12px;
+    font-weight: 700;
+    height: 32px;
+    min-width: 68px;
+    padding: 0 10px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    line-height: 1;
-    transition: background 0.15s;
-    touch-action: manipulation; /* 더블탭 줌 방지, 터치 즉시 반응 */
+    gap: 3px;
+    touch-action: manipulation;
     -webkit-user-select: none;
     user-select: none;
+    transition: opacity 0.15s;
+}
+
+#muteBtn.muted {
+    background: #444;
+    color: #888;
 }
 
 #muteBtn:active {
-    background: rgba(255, 255, 255, 0.18);
-    transform: translateY(-50%) scale(0.93);
+    opacity: 0.7;
+    transform: translateY(-50%) scale(0.95);
 }
 
 /* ===========================
-   게임 캔버스 (모바일 우선)
+   게임 캔버스
 =========================== */
 #gameWrapper {
     width: 100%;
     display: flex;
     justify-content: center;
-    margin-top: 4px;
 }
 
 #gameCanvas {
@@ -73,7 +83,7 @@ body {
     width: 100%;
     max-width: 600px;
     background: black;
-    border-radius: 8px;
+    border-radius: 0;
     image-rendering: crisp-edges;
     image-rendering: pixelated;
 }
@@ -82,46 +92,57 @@ body {
    행운 번호 표시
 =========================== */
 #luckyNumbers {
-    margin-top: 10px;
-    font-size: 18px;
+    height: 32px;
+    line-height: 32px;
+    font-size: 17px;
     font-weight: 700;
     letter-spacing: 1px;
-    min-height: 28px;
-    padding: 0 12px;
+    overflow: hidden;
 }
 
 /* ===========================
-   공유 버튼 영역
+   공유 버튼 — 한 줄, 항상 공간 예약
 =========================== */
 #shareButtons {
-    display: none;
-    margin-top: 10px;
-    padding-bottom: 10px;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 12px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+}
+
+#shareButtons.visible {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 #shareButtons button {
-    display: block;
-    width: 90%;
-    max-width: 320px;
-    padding: 12px;
-    margin: 6px auto;
-    font-size: 16px;
+    flex: 1;
+    max-width: 108px;
+    height: 34px;
+    font-size: 12px;
+    font-weight: 700;
     border: none;
-    border-radius: 10px;
+    border-radius: 17px;
     color: white;
     background: linear-gradient(135deg, #3d7bff, #365ed6);
-    font-weight: 600;
     cursor: pointer;
+    white-space: nowrap;
+    touch-action: manipulation;
 }
 
 #shareButtons button:active {
-    transform: scale(0.97);
-    background: #274fc2;
+    opacity: 0.75;
+    transform: scale(0.96);
 }
 
 /* ===========================
    하단 고정 배너 광고 (sticky)
-   320×50 — 게임 내내 항시 노출
 =========================== */
 #stickyAdBar {
     position: fixed;
@@ -133,7 +154,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 58px;
+    height: 58px;
     z-index: 9999;
 }
 
@@ -151,41 +172,58 @@ body {
 }
 
 /* ===========================
-   PC 전용 스타일
+   PC 전용
 =========================== */
 @media (min-width: 769px) {
 
     body {
-        padding-bottom: 0;
+        overflow: auto;
+        height: auto;
     }
 
     #headerTitle {
-        font-size: 22px;
-        padding: 14px 56px;
+        font-size: 20px;
+        height: 52px;
+        line-height: 52px;
+        padding: 0 64px;
     }
 
     #muteBtn {
-        right: 16px;
-        width: 42px;
-        height: 38px;
-        font-size: 20px;
+        right: 14px;
+        height: 36px;
+        min-width: 76px;
+        font-size: 13px;
     }
 
     #gameCanvas {
         width: 600px;
         height: 400px;
+        border-radius: 10px;
+    }
+
+    #gameWrapper {
+        margin-top: 6px;
     }
 
     #luckyNumbers {
-        font-size: 22px;
-        margin-top: 14px;
+        height: 40px;
+        line-height: 40px;
+        font-size: 20px;
+        margin-top: 4px;
+    }
+
+    #shareButtons {
+        height: 52px;
+        gap: 12px;
     }
 
     #shareButtons button {
-        font-size: 17px;
+        max-width: 130px;
+        height: 40px;
+        font-size: 14px;
     }
 
     #stickyAdBar {
-        display: none; /* PC에서는 숨김 */
+        display: none;
     }
 }
