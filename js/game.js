@@ -1067,10 +1067,17 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-// 뮤트 버튼 초기 상태 반영
+// 뮤트 버튼 초기화 + 모바일 터치 직접 처리
 (function () {
     const btn = document.getElementById('muteBtn');
-    if (btn) btn.textContent = isMuted ? '🔇' : '🔊';
+    if (!btn) return;
+    btn.textContent = isMuted ? '🔇' : '🔊';
+
+    // 모바일: touchend에서 직접 처리 (click 이벤트 지연·누락 방지)
+    btn.addEventListener('touchend', function (e) {
+        e.preventDefault(); // 이후 click 이벤트 중복 발생 차단
+        toggleMute();
+    }, { passive: false });
 })();
 
 gameLoop();
