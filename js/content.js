@@ -25,6 +25,8 @@ function saveHistory(numbers) {
     updateCompare();
 }
 
+let historyExpanded = false;
+
 function renderHistory() {
     const el = document.getElementById('historyList');
     if (!el) return;
@@ -32,10 +34,14 @@ function renderHistory() {
 
     if (history.length === 0) {
         el.innerHTML = '<p class="empty-msg">아직 뽑은 번호가 없어요.<br>게임을 플레이해보세요!</p>';
+        document.getElementById('historyToggle').style.display = 'none';
         return;
     }
 
-    el.innerHTML = history.map(item => `
+    const showCount = historyExpanded ? history.length : Math.min(5, history.length);
+    const toggleBtn = document.getElementById('historyToggle');
+
+    el.innerHTML = history.slice(0, showCount).map(item => `
         <div class="history-item">
             <span class="history-date">${item.date}</span>
             <div class="history-balls">
@@ -43,6 +49,18 @@ function renderHistory() {
             </div>
         </div>
     `).join('');
+
+    if (history.length > 5) {
+        toggleBtn.style.display = 'block';
+        toggleBtn.textContent = historyExpanded ? '접기 ▲' : `더 보기 (${history.length - 5}개) ▼`;
+    } else {
+        toggleBtn.style.display = 'none';
+    }
+}
+
+function toggleHistory() {
+    historyExpanded = !historyExpanded;
+    renderHistory();
 }
 
 function clearHistory() {
@@ -106,40 +124,43 @@ async function fetchLatestLotto() {
     const el = document.getElementById('latestResult');
     if (!el) return;
 
-    // 현재 회차 추정 (2002-12-07 1회차 기준)
+    // 현재 회차 추정 (2002-12-07 1회차 기준, 토요일 추첨 후 반영)
     const start = new Date('2002-12-07');
     const now = new Date();
-    const round = Math.floor((now - start) / (7 * 24 * 60 * 60 * 1000)) + 1;
+    let round = Math.floor((now - start) / (7 * 24 * 60 * 60 * 1000)) + 1;
+    // 토요일 20:45 이전이면 아직 이번 주 미추첨 → 전 회차
+    const day = now.getDay();
+    const hour = now.getHours();
+    if (day < 6 || (day === 6 && hour < 21)) round -= 1;
+
+    // CORS 우회: 공개 프록시 사용
+    const apiUrl = `https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=${round}`;
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
 
     try {
-        const res = await fetch(
-            `https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=${round}`
-        );
-        const data = await res.json();
+        const res = await fetch(proxyUrl);
+        const wrapper = await res.json();
+        const data = JSON.parse(wrapper.contents);
 
         if (data.returnValue !== 'success') throw new Error();
 
         const nums = [data.drwtNo1, data.drwtNo2, data.drwtNo3, data.drwtNo4, data.drwtNo5, data.drwtNo6];
         const bonus = data.bnusNo;
+        const prize = Math.round(data.firstWinamnt / 100000000 * 10) / 10;
 
         el.innerHTML = `
             <p class="latest-round">제 ${data.drwNo}회 (${data.drwNoDate})</p>
             <div class="latest-balls">
                 ${nums.map(n => renderBall(n)).join('')}
-                <span style="color:#555;font-size:18px;margin:0 2px">+</span>
+                <span style="color:#555;font-size:18px;margin:0 4px">+</span>
                 ${renderBall(bonus, 'ball-bonus')}
             </div>
             <div class="latest-prize">
-                <div class="prize-item">
-                    1등 당첨자<strong>${data.firstPrzwnerCo}명</strong>
-                </div>
-                <div class="prize-item">
-                    1등 당첨금<strong>${Math.round(data.firstWinamnt / 100000000 * 10) / 10}억 원</strong>
-                </div>
+                <div class="prize-item">1등 당첨자<strong>${data.firstPrzwnerCo}명</strong></div>
+                <div class="prize-item">1등 당첨금<strong>${prize}억 원</strong></div>
             </div>
         `;
 
-        // 비교용 데이터 저장
         window._latestNums = nums;
         window._latestBonus = bonus;
         updateCompare();
