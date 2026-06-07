@@ -120,54 +120,69 @@ function renderStats(type) {
 // 최신 당첨번호 (동행복권 API)
 // ===========================
 
+function calcRound() {
+    const start = new Date('2002-12-07');
+    const now = new Date();
+    let round = Math.floor((now - start) / (7 * 24 * 60 * 60 * 1000)) + 1;
+    const day = now.getDay();
+    const hour = now.getHours();
+    if (day < 6 || (day === 6 && hour < 21)) round -= 1;
+    return round;
+}
+
+async function tryFetch(round) {
+    const apiUrl = `https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=${round}`;
+    const proxies = [
+        `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
+        `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`,
+    ];
+
+    for (const url of proxies) {
+        try {
+            const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+            const raw = await res.json();
+            // allorigins는 {contents:string}, corsproxy는 JSON 직접 반환
+            const data = raw.contents ? JSON.parse(raw.contents) : raw;
+            if (data.returnValue === 'success') return data;
+        } catch { /* 다음 프록시 시도 */ }
+    }
+    return null;
+}
+
 async function fetchLatestLotto() {
     const el = document.getElementById('latestResult');
     if (!el) return;
 
-    // 현재 회차 추정 (2002-12-07 1회차 기준, 토요일 추첨 후 반영)
-    const start = new Date('2002-12-07');
-    const now = new Date();
-    let round = Math.floor((now - start) / (7 * 24 * 60 * 60 * 1000)) + 1;
-    // 토요일 20:45 이전이면 아직 이번 주 미추첨 → 전 회차
-    const day = now.getDay();
-    const hour = now.getHours();
-    if (day < 6 || (day === 6 && hour < 21)) round -= 1;
+    let round = calcRound();
+    let data = await tryFetch(round);
+    // 최신 회차 미집계면 전 회차 재시도
+    if (!data) data = await tryFetch(round - 1);
 
-    // CORS 우회: 공개 프록시 사용
-    const apiUrl = `https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=${round}`;
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
-
-    try {
-        const res = await fetch(proxyUrl);
-        const wrapper = await res.json();
-        const data = JSON.parse(wrapper.contents);
-
-        if (data.returnValue !== 'success') throw new Error();
-
-        const nums = [data.drwtNo1, data.drwtNo2, data.drwtNo3, data.drwtNo4, data.drwtNo5, data.drwtNo6];
-        const bonus = data.bnusNo;
-        const prize = Math.round(data.firstWinamnt / 100000000 * 10) / 10;
-
-        el.innerHTML = `
-            <p class="latest-round">제 ${data.drwNo}회 (${data.drwNoDate})</p>
-            <div class="latest-balls">
-                ${nums.map(n => renderBall(n)).join('')}
-                <span style="color:#555;font-size:18px;margin:0 4px">+</span>
-                ${renderBall(bonus, 'ball-bonus')}
-            </div>
-            <div class="latest-prize">
-                <div class="prize-item">1등 당첨자<strong>${data.firstPrzwnerCo}명</strong></div>
-                <div class="prize-item">1등 당첨금<strong>${prize}억 원</strong></div>
-            </div>
-        `;
-
-        window._latestNums = nums;
-        window._latestBonus = bonus;
-        updateCompare();
-
-    } catch {
+    if (!data) {
         el.innerHTML = `<p class="loading-msg">당첨번호를 불러올 수 없어요.<br>잠시 후 다시 확인해주세요.</p>`;
+        return;
     }
+
+    const nums = [data.drwtNo1, data.drwtNo2, data.drwtNo3, data.drwtNo4, data.drwtNo5, data.drwtNo6];
+    const bonus = data.bnusNo;
+    const prize = Math.round(data.firstWinamnt / 100000000 * 10) / 10;
+
+    el.innerHTML = `
+        <p class="latest-round">제 ${data.drwNo}회 (${data.drwNoDate})</p>
+        <div class="latest-balls">
+            ${nums.map(n => renderBall(n)).join('')}
+            <span style="color:#555;font-size:18px;margin:0 4px">+</span>
+            ${renderBall(bonus, 'ball-bonus')}
+        </div>
+        <div class="latest-prize">
+            <div class="prize-item">1등 당첨자<strong>${data.firstPrzwnerCo}명</strong></div>
+            <div class="prize-item">1등 당첨금<strong>${prize}억 원</strong></div>
+        </div>
+    `;
+
+    window._latestNums = nums;
+    window._latestBonus = bonus;
+    updateCompare();
 }
 
 function updateCompare() {
