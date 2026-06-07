@@ -176,8 +176,6 @@ body {
 }
 
 .ad-banner-placeholder {
-    width: 320px;
-    height: 50px;
     background: #1a1a1a;
     border: 1px dashed #3a3a3a;
     border-radius: 4px;
@@ -188,10 +186,29 @@ body {
     font-size: 12px;
 }
 
+/* 모바일: 320×50만 표시 */
+.ad-mobile { width: 320px; height: 50px; }
+.ad-pc     { display: none; }
+
 /* ===========================
    PC 전용 (769px 이상)
 =========================== */
 @media (min-width: 769px) {
+
+    /* 상/하단 배너 높이를 728×90 기준으로 */
+    body {
+        padding-top: 100px;
+        padding-bottom: 100px;
+    }
+
+    #topAdBar,
+    #stickyAdBar {
+        height: 100px;
+    }
+
+    /* PC: 728×90만 표시, 모바일용 숨김 */
+    .ad-mobile { display: none; }
+    .ad-pc     { display: flex; width: 728px; height: 90px; }
 
     #headerTitle {
         font-size: 20px;

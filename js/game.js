@@ -13,8 +13,9 @@ function resizeCanvas() {
     const vw = window.innerWidth;
     const vh = window.innerHeight || screen.height;
 
-    // 상단광고(58) + 하단광고(58) + 헤더(44/52) + 번호표시(32/40) + 공유버튼(44/52) + 여유(10)
-    const uiH = isMobile ? 246 : 256;
+    // 모바일: 상단광고(58)+하단광고(58)+헤더(44)+번호(32)+공유버튼(44)+여유(10) = 246
+    // PC:     상단광고(100)+하단광고(100)+헤더(52)+번호(40)+공유버튼(52)+여유(10) = 354
+    const uiH = isMobile ? 246 : 354;
     const available = vh - uiH;
 
     const maxW = isMobile ? vw : Math.min(600, vw - 32);
