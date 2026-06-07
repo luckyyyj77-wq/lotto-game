@@ -7,23 +7,23 @@ const luckyNumbersEl = document.getElementById('luckyNumbers');
 
 let isMobile = window.innerWidth <= 768;
 
-// 캔버스 리사이즈 — 모바일: 스크롤 없이 한 화면에 맞춤
+// 캔버스 리사이즈 — 상/하단 광고(각 58) 항상 고정, 나머지 UI 높이 빼고 캔버스 맞춤
 function resizeCanvas() {
     isMobile = window.innerWidth <= 768;
     const vw = window.innerWidth;
+    const vh = window.innerHeight || screen.height;
 
-    if (isMobile) {
-        // 상단광고(58) + 헤더(44) + 번호표시(32) + 공유버튼(44) + 하단광고(58) + 여유(10) = 246px
-        const available = (window.innerHeight || screen.height) - 246;
-        const aspectH = Math.round(vw * (400 / 600)); // 3:2 비율 유지
-        const finalH = Math.max(160, Math.min(aspectH, available));
+    // 상단광고(58) + 하단광고(58) + 헤더(44/52) + 번호표시(32/40) + 공유버튼(44/52) + 여유(10)
+    const uiH = isMobile ? 246 : 256;
+    const available = vh - uiH;
 
-        canvas.style.width = vw + 'px';
-        canvas.style.height = finalH + 'px';
-    } else {
-        canvas.style.width = '600px';
-        canvas.style.height = '400px';
-    }
+    const maxW = isMobile ? vw : Math.min(600, vw - 32);
+    const aspectH = Math.round(maxW * (400 / 600));
+    const finalH = Math.max(160, Math.min(aspectH, available));
+    const finalW = Math.round(finalH * (600 / 400));
+
+    canvas.style.width = finalW + 'px';
+    canvas.style.height = finalH + 'px';
 }
 
 resizeCanvas();

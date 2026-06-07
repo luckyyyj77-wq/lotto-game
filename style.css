@@ -8,7 +8,7 @@
 
 body {
     margin: 0;
-    padding: 58px 0 0; /* 상단 고정 배너 높이만큼 밀어내기 */
+    padding: 58px 0 58px; /* 상단/하단 고정 배너 높이 */
     background: #121212;
     color: white;
     text-align: center;
@@ -189,19 +189,9 @@ body {
 }
 
 /* ===========================
-   PC 전용
+   PC 전용 (769px 이상)
 =========================== */
 @media (min-width: 769px) {
-
-    body {
-        overflow: auto;
-        height: auto;
-        padding-top: 0;
-    }
-
-    #topAdBar {
-        display: none;
-    }
 
     #headerTitle {
         font-size: 20px;
@@ -217,14 +207,12 @@ body {
         font-size: 13px;
     }
 
-    #gameCanvas {
-        width: 600px;
-        height: 400px;
-        border-radius: 10px;
-    }
-
     #gameWrapper {
         margin-top: 6px;
+    }
+
+    #gameCanvas {
+        border-radius: 10px;
     }
 
     #luckyNumbers {
@@ -243,9 +231,5 @@ body {
         max-width: 130px;
         height: 40px;
         font-size: 14px;
-    }
-
-    #stickyAdBar {
-        display: none;
     }
 }
