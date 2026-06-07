@@ -967,6 +967,8 @@ function updateLuckyNumbers() {
     luckyNumbersEl.textContent = numbers;
     if (player.caughtBalls.length === 6) {
         document.getElementById('shareButtons').classList.add('visible');
+        const nums = player.caughtBalls.map(b => b.number).sort((a, b) => a - b);
+        window.dispatchEvent(new CustomEvent('lottoComplete', { detail: { numbers: nums } }));
     }
 }
 

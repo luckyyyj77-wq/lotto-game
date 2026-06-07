@@ -8,17 +8,17 @@
 
 body {
     margin: 0;
-    padding: 58px 0 58px; /* 상단/하단 고정 배너 높이 */
+    padding: 58px 0 58px;
     background: #121212;
     color: white;
     text-align: center;
     font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
-    overflow: hidden;
-    height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 /* ===========================
-   상단 고정 배너 광고 (fixed top)
+   상단 고정 배너 광고
 =========================== */
 #topAdBar {
     position: fixed;
@@ -35,7 +35,16 @@ body {
 }
 
 /* ===========================
-   상단 타이틀 + 소리 버튼
+   게임 페이지 — 첫 화면 꽉 채움
+=========================== */
+#gamePage {
+    min-height: calc(100dvh - 116px); /* 상단58 + 하단58 제외 */
+    display: flex;
+    flex-direction: column;
+}
+
+/* ===========================
+   헤더 타이틀 + 소리 버튼
 =========================== */
 #headerTitle {
     position: relative;
@@ -49,6 +58,7 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex-shrink: 0;
 }
 
 #muteBtn {
@@ -90,15 +100,15 @@ body {
    게임 캔버스
 =========================== */
 #gameWrapper {
-    width: 100%;
+    flex: 1;
     display: flex;
+    align-items: center;
     justify-content: center;
+    padding: 4px 0;
 }
 
 #gameCanvas {
     display: block;
-    width: 100%;
-    max-width: 600px;
     background: black;
     border-radius: 0;
     image-rendering: crisp-edges;
@@ -115,10 +125,11 @@ body {
     font-weight: 700;
     letter-spacing: 1px;
     overflow: hidden;
+    flex-shrink: 0;
 }
 
 /* ===========================
-   공유 버튼 — 한 줄, 항상 공간 예약
+   공유 버튼
 =========================== */
 #shareButtons {
     display: flex;
@@ -131,6 +142,7 @@ body {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.25s;
+    flex-shrink: 0;
 }
 
 #shareButtons.visible {
@@ -159,7 +171,370 @@ body {
 }
 
 /* ===========================
-   하단 고정 배너 광고 (sticky)
+   스크롤 유도
+=========================== */
+#scrollHint {
+    height: 28px;
+    line-height: 28px;
+    font-size: 11px;
+    color: #555;
+    flex-shrink: 0;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(3px); }
+}
+
+/* ===========================
+   콘텐츠 영역
+=========================== */
+#contentArea {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 16px 32px;
+    text-align: left;
+}
+
+.info-section {
+    background: #1e1e1e;
+    border-radius: 14px;
+    padding: 20px 16px;
+    margin: 16px 0;
+}
+
+.section-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 6px;
+    color: #fff;
+}
+
+.section-desc {
+    font-size: 12px;
+    color: #888;
+    margin: 0 0 14px;
+}
+
+/* ===========================
+   내 번호 기록
+=========================== */
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.history-item {
+    background: #2a2a2a;
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.history-date {
+    font-size: 11px;
+    color: #666;
+    white-space: nowrap;
+}
+
+.history-balls {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.ball {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+}
+
+.ball.b1  { background: #f0ad00; }
+.ball.b2  { background: #69c8f2; }
+.ball.b3  { background: #ff6363; }
+.ball.b4  { background: #aaa; }
+.ball.b5  { background: #b0d840; color: #333; }
+
+.empty-msg {
+    font-size: 13px;
+    color: #666;
+    text-align: center;
+    padding: 16px 0;
+    margin: 0;
+    line-height: 1.8;
+}
+
+.clear-btn {
+    background: none;
+    border: 1px solid #444;
+    color: #888;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    display: block;
+    margin: 0 auto;
+}
+
+.clear-btn:active { opacity: 0.6; }
+
+/* ===========================
+   번호 통계
+=========================== */
+.stats-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.tab-btn {
+    flex: 1;
+    height: 34px;
+    border: 1px solid #444;
+    border-radius: 8px;
+    background: none;
+    color: #888;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.tab-btn.active {
+    background: #2a7aff;
+    border-color: #2a7aff;
+    color: white;
+}
+
+.stats-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.stat-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stat-num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+}
+
+.stat-bar-wrap {
+    flex: 1;
+    height: 14px;
+    background: #2a2a2a;
+    border-radius: 7px;
+    overflow: hidden;
+}
+
+.stat-bar {
+    height: 100%;
+    border-radius: 7px;
+    background: linear-gradient(90deg, #2a7aff, #5aa0ff);
+    transition: width 0.4s ease;
+}
+
+.stat-bar.cold {
+    background: linear-gradient(90deg, #4a9eff88, #4a9eff44);
+}
+
+.stat-count {
+    width: 32px;
+    font-size: 11px;
+    color: #888;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.stats-note {
+    font-size: 11px;
+    color: #555;
+    margin: 10px 0 0;
+    text-align: right;
+}
+
+/* ===========================
+   최신 당첨번호
+=========================== */
+.latest-result {
+    text-align: center;
+}
+
+.latest-round {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 10px;
+}
+
+.latest-balls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.ball-bonus {
+    position: relative;
+}
+
+.ball-bonus::before {
+    content: '보';
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    color: #aaa;
+}
+
+.latest-prize {
+    margin-top: 14px;
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.prize-item {
+    background: #2a2a2a;
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 12px;
+    color: #ccc;
+    text-align: center;
+}
+
+.prize-item strong {
+    display: block;
+    font-size: 15px;
+    color: #f0ad00;
+    margin-top: 2px;
+}
+
+.compare-area {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid #2a2a2a;
+}
+
+.compare-title {
+    font-size: 13px;
+    color: #888;
+    margin: 0 0 8px;
+    text-align: center;
+}
+
+#compareResult {
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.loading-msg {
+    font-size: 13px;
+    color: #666;
+    text-align: center;
+    padding: 12px 0;
+    margin: 0;
+}
+
+/* ===========================
+   D-day
+=========================== */
+.dday-count {
+    font-size: 48px;
+    font-weight: 900;
+    color: #2a7aff;
+    text-align: center;
+    margin: 8px 0 4px;
+    letter-spacing: -1px;
+}
+
+/* ===========================
+   당첨 기준 테이블
+=========================== */
+.guide-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.guide-table th {
+    background: #2a2a2a;
+    color: #aaa;
+    padding: 8px 10px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.guide-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #2a2a2a;
+    text-align: center;
+    color: #ccc;
+}
+
+.guide-table tr:first-child td { color: #f0ad00; font-weight: 700; }
+.guide-table tr:last-child td  { border-bottom: none; }
+
+/* ===========================
+   중간 광고
+=========================== */
+.inline-ad {
+    display: flex;
+    justify-content: center;
+    margin: 8px 0;
+}
+
+.ad-inline {
+    width: 320px;
+    height: 100px;
+}
+
+/* ===========================
+   광고 placeholder 공통
+=========================== */
+.ad-banner-placeholder {
+    background: #1a1a1a;
+    border: 1px dashed #3a3a3a;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    font-size: 12px;
+}
+
+.ad-mobile { width: 320px; height: 50px; }
+.ad-pc     { display: none; }
+
+/* ===========================
+   하단 고정 배너
 =========================== */
 #stickyAdBar {
     position: fixed;
@@ -175,27 +550,21 @@ body {
     z-index: 9999;
 }
 
-.ad-banner-placeholder {
-    background: #1a1a1a;
-    border: 1px dashed #3a3a3a;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #555;
-    font-size: 12px;
+/* ===========================
+   푸터
+=========================== */
+.footer-note {
+    font-size: 11px;
+    color: #444;
+    text-align: center;
+    padding: 16px 0 8px;
 }
 
-/* 모바일: 320×50만 표시 */
-.ad-mobile { width: 320px; height: 50px; }
-.ad-pc     { display: none; }
-
 /* ===========================
-   PC 전용 (769px 이상)
+   PC (769px 이상)
 =========================== */
 @media (min-width: 769px) {
 
-    /* 상/하단 배너 높이를 728×90 기준으로 */
     body {
         padding-top: 100px;
         padding-bottom: 100px;
@@ -206,9 +575,12 @@ body {
         height: 100px;
     }
 
-    /* PC: 728×90만 표시, 모바일용 숨김 */
     .ad-mobile { display: none; }
     .ad-pc     { display: flex; width: 728px; height: 90px; }
+
+    #gamePage {
+        min-height: calc(100dvh - 200px);
+    }
 
     #headerTitle {
         font-size: 20px;
@@ -224,10 +596,6 @@ body {
         font-size: 13px;
     }
 
-    #gameWrapper {
-        margin-top: 6px;
-    }
-
     #gameCanvas {
         border-radius: 10px;
     }
@@ -236,7 +604,6 @@ body {
         height: 40px;
         line-height: 40px;
         font-size: 20px;
-        margin-top: 4px;
     }
 
     #shareButtons {
@@ -248,5 +615,27 @@ body {
         max-width: 130px;
         height: 40px;
         font-size: 14px;
+    }
+
+    #contentArea {
+        max-width: 720px;
+        padding: 0 24px 40px;
+    }
+
+    .info-section {
+        padding: 24px 24px;
+    }
+
+    .section-title {
+        font-size: 18px;
+    }
+
+    .dday-count {
+        font-size: 64px;
+    }
+
+    .ad-inline {
+        width: 468px;
+        height: 60px;
     }
 }
