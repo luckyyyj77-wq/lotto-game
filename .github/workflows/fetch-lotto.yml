@@ -27,82 +27,91 @@ jobs:
           start = date(2002, 12, 7)
           today = date.today()
           round_no = (today - start).days // 7 + 1
+          print(f"Target round: {round_no}")
 
-          # 네이버 검색에서 로또 당첨번호 파싱
-          def fetch_from_naver(r):
-              url = f"https://search.naver.com/search.naver?query=로또+{r}회+당첨번호"
+          def fetch_naver(r):
+              url = "https://search.naver.com/search.naver"
+              params = {"query": f"로또 {r}회"}
               headers = {
-                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
                   "Accept-Language": "ko-KR,ko;q=0.9",
+                  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
               }
-              try:
-                  resp = requests.get(url, headers=headers, timeout=15)
-                  print(f"Naver status: {resp.status_code}")
-                  # 네이버 검색 결과에서 번호 추출
-                  from bs4 import BeautifulSoup
-                  soup = BeautifulSoup(resp.text, "html.parser")
-                  # 로또 번호 파싱 (네이버 로또 검색 결과 구조)
-                  nums = []
-                  balls = soup.select(".lotto_num_wrap .num, .lottoball, [class*='ball']")
-                  print(f"Found ball elements: {len(balls)}")
-                  for b in balls:
-                      t = b.get_text(strip=True)
-                      if t.isdigit() and 1 <= int(t) <= 45:
-                          nums.append(int(t))
-                  print(f"Parsed numbers: {nums}")
-                  return nums
-              except Exception as e:
-                  print(f"Naver error: {e}")
-              return []
+              resp = requests.get(url, params=params, headers=headers, timeout=15)
+              print(f"Naver status: {resp.status_code}")
 
-          # 동행복권 당회차 페이지 직접 파싱 (JSON API 대신 HTML)
-          def fetch_from_dh_html(r):
-              url = f"https://dhlottery.co.kr/gameResult.do?method=byWin&drwNo={r}"
-              headers = {
-                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                  "Accept": "text/html,application/xhtml+xml",
-                  "Accept-Language": "ko-KR,ko;q=0.9",
-              }
+              from bs4 import BeautifulSoup
+              soup = BeautifulSoup(resp.text, "html.parser")
+
+              # 네이버 로또 위젯에서 번호 추출
+              # 방법 1: data-numbers 속성
+              nums_el = soup.find(attrs={"data-numbers": True})
+              if nums_el:
+                  raw = nums_el["data-numbers"]
+                  print(f"data-numbers: {raw}")
+
+              # 방법 2: 텍스트에서 정규식으로 번호+보너스 패턴 추출
+              text = soup.get_text()
+              # "1 2 3 4 5 6 + 7" 패턴
+              pattern = r'당첨번호.*?(\d{1,2})\D+(\d{1,2})\D+(\d{1,2})\D+(\d{1,2})\D+(\d{1,2})\D+(\d{1,2})'
+              m = re.search(pattern, text, re.DOTALL)
+              if m:
+                  nums = [int(x) for x in m.groups()]
+                  print(f"Regex match: {nums}")
+
+              # 방법 3: 클래스명으로 볼 찾기
+              candidates = []
+              for sel in [".lotto645_number", ".num_group span", ".wr_num span", "strong.num"]:
+                  els = soup.select(sel)
+                  if els:
+                      print(f"Selector '{sel}': {[e.get_text(strip=True) for e in els]}")
+                      candidates = [int(e.get_text(strip=True)) for e in els if e.get_text(strip=True).isdigit() and 1 <= int(e.get_text(strip=True)) <= 45]
+                      if len(candidates) >= 7:
+                          break
+
+              print(f"Candidates: {candidates}")
+
+              # 페이지 스니펫 저장 (디버그용)
+              with open("data/debug_naver.html", "w", encoding="utf-8") as f:
+                  f.write(resp.text[:5000])
+
+              return candidates
+
+          import os
+          os.makedirs("data", exist_ok=True)
+
+          for r in [round_no, round_no - 1]:
               try:
-                  resp = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
-                  print(f"DH HTML status: {resp.status_code}, url: {resp.url}")
-                  from bs4 import BeautifulSoup
-                  soup = BeautifulSoup(resp.text, "html.parser")
-                  # 번호 추출
-                  balls = soup.select(".win_result .ball_645, .num.al")
-                  print(f"DH balls: {[b.get_text(strip=True) for b in balls]}")
-                  nums = [int(b.get_text(strip=True)) for b in balls if b.get_text(strip=True).isdigit()]
-                  # 날짜 추출
-                  date_el = soup.select_one(".win_result h4")
-                  draw_date = date_el.get_text(strip=True) if date_el else ""
-                  print(f"Date: {draw_date}, nums: {nums}")
+                  nums = fetch_naver(r)
                   if len(nums) >= 7:
-                      return {
+                      data = {
                           "returnValue": "success",
                           "drwNo": r,
-                          "drwNoDate": draw_date,
+                          "drwNoDate": "",
                           "drwtNo1": nums[0], "drwtNo2": nums[1], "drwtNo3": nums[2],
                           "drwtNo4": nums[3], "drwtNo5": nums[4], "drwtNo6": nums[5],
                           "bnusNo": nums[6],
                           "firstWinamnt": 0,
                           "firstPrzwnerCo": 0,
                       }
+                      with open("data/latest.json", "w", encoding="utf-8") as f:
+                          json.dump(data, f, ensure_ascii=False)
+                      print(f"Saved round {r}: {nums}")
+                      sys.exit(0)
               except Exception as e:
-                  print(f"DH HTML error: {e}")
-              return None
+                  print(f"Error round {r}: {e}")
 
-          data = fetch_from_dh_html(round_no) or fetch_from_dh_html(round_no - 1)
-
-          if data:
-              import os
-              os.makedirs("data", exist_ok=True)
-              with open("data/latest.json", "w", encoding="utf-8") as f:
-                  json.dump(data, f, ensure_ascii=False)
-              print(f"Saved round {data['drwNo']}: {data}")
-          else:
-              print("All attempts failed")
-              sys.exit(1)
+          print("All attempts failed")
+          sys.exit(1)
           PYEOF
+
+      - name: Upload debug html
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-html
+          path: data/debug_naver.html
+          if-no-files-found: ignore
 
       - name: Commit and push
         run: |
