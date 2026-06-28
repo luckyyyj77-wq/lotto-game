@@ -2,9 +2,9 @@ name: Fetch Latest Lotto
 
 on:
   schedule:
-    - cron: '0 12 * * 6'   # 매주 토요일 21:00 KST (UTC+9 = UTC 12:00)
-    - cron: '30 12 * * 6'  # 토요일 21:30 KST (발표 후 여유)
-  workflow_dispatch:         # 수동 실행 가능
+    - cron: '0 12 * * 6'   # 매주 토요일 21:00 KST
+    - cron: '30 12 * * 6'  # 토요일 21:30 KST
+  workflow_dispatch:
 
 jobs:
   fetch:
@@ -22,26 +22,48 @@ jobs:
           ")
           echo "Trying round $ROUND"
 
-          fetch_round() {
-            curl -sfL "https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=$1" \
-              -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
-              --max-time 15
+          try_fetch() {
+            local r=$1
+            # 엔드포인트 1: 동행복권 JSON API
+            DATA=$(curl -sL --max-time 15 \
+              -H "User-Agent: Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36" \
+              -H "Referer: https://m.dhlottery.co.kr/" \
+              "https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=${r}")
+            echo "EP1: $DATA"
+            if echo "$DATA" | grep -q '"returnValue":"success"'; then
+              echo "$DATA"
+              return 0
+            fi
+
+            # 엔드포인트 2: 동행복권 모바일
+            DATA=$(curl -sL --max-time 15 \
+              -H "User-Agent: Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36" \
+              "https://m.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=${r}")
+            echo "EP2: $DATA"
+            if echo "$DATA" | grep -q '"returnValue":"success"'; then
+              echo "$DATA"
+              return 0
+            fi
+
+            return 1
           }
 
-          DATA=$(fetch_round $ROUND)
-          if [ -z "$DATA" ] || ! echo "$DATA" | grep -q '"returnValue":"success"'; then
+          RAW=$(try_fetch $ROUND)
+          DATA=$(echo "$RAW" | grep '"returnValue":"success"' | head -1)
+
+          if [ -z "$DATA" ]; then
             ROUND=$((ROUND - 1))
             echo "Retrying round $ROUND"
-            DATA=$(fetch_round $ROUND)
+            RAW=$(try_fetch $ROUND)
+            DATA=$(echo "$RAW" | grep '"returnValue":"success"' | head -1)
           fi
 
-          if echo "$DATA" | grep -q '"returnValue":"success"'; then
+          if [ -n "$DATA" ]; then
             mkdir -p data
             echo "$DATA" > data/latest.json
-            echo "Saved round $ROUND"
+            echo "Saved: $DATA"
           else
-            echo "Response: $DATA"
-            echo "Failed to fetch lotto data"
+            echo "All endpoints failed"
             exit 1
           fi
 
@@ -51,7 +73,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/latest.json
           if git diff --cached --quiet; then
-            echo "No changes to commit"
+            echo "No changes"
           else
             git commit -m "당첨번호 자동 업데이트 $(date +'%Y-%m-%d')"
             git push
