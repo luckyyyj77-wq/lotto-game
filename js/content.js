@@ -141,7 +141,6 @@ async function tryFetch(round) {
         try {
             const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
             const raw = await res.json();
-            // allorigins는 {contents:string}, corsproxy는 JSON 직접 반환
             const data = raw.contents ? JSON.parse(raw.contents) : raw;
             if (data.returnValue === 'success') return data;
         } catch { /* 다음 프록시 시도 */ }
@@ -153,10 +152,29 @@ async function fetchLatestLotto() {
     const el = document.getElementById('latestResult');
     if (!el) return;
 
-    let round = calcRound();
-    let data = await tryFetch(round);
-    // 최신 회차 미집계면 전 회차 재시도
-    if (!data) data = await tryFetch(round - 1);
+    // 1순위: GitHub Actions가 저장한 로컬 JSON (CORS 없음, 안정적)
+    let data = null;
+    try {
+        const res = await fetch('./data/latest.json', { signal: AbortSignal.timeout(3000) });
+        if (res.ok) {
+            const json = await res.json();
+            if (json.returnValue === 'success') {
+                const cachedRound = json.drwNo;
+                const currentRound = calcRound();
+                // 캐시가 최신 회차 또는 직전 회차면 사용
+                if (cachedRound >= currentRound - 1) {
+                    data = json;
+                }
+            }
+        }
+    } catch { /* 로컬 파일 없으면 프록시로 폴백 */ }
+
+    // 2순위: 프록시 폴백
+    if (!data) {
+        let round = calcRound();
+        data = await tryFetch(round);
+        if (!data) data = await tryFetch(round - 1);
+    }
 
     if (!data) {
         el.innerHTML = `<p class="loading-msg">당첨번호를 불러올 수 없어요.<br>잠시 후 다시 확인해주세요.</p>`;
