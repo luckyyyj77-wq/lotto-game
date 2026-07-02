@@ -80,7 +80,21 @@ jobs:
                   draw_date = f"{m.group(2)}-{m.group(3)}-{m.group(4)}"
                   print(f"Shown round: {shown_round} ({draw_date})")
 
-              return {"round": shown_round, "date": draw_date, "nums": nums}
+              # 1등 당첨금/당첨자 수 — "1등 당첨금 3,519,759,000원 (당첨게임 수 8개)"
+              amount, winners = 0, 0
+              win_text = area.select_one(".win_text")
+              if win_text:
+                  t = win_text.get_text(" ", strip=True)
+                  print(f"Win text: {t}")
+                  m = re.search(r'당첨금\s*([\d,]+)\s*원', t)
+                  if m:
+                      amount = int(m.group(1).replace(",", ""))
+                  m = re.search(r'당첨게임\s*수\s*([\d,]+)\s*개', t)
+                  if m:
+                      winners = int(m.group(1).replace(",", ""))
+
+              return {"round": shown_round, "date": draw_date, "nums": nums,
+                      "amount": amount, "winners": winners}
 
           os.makedirs("data", exist_ok=True)
 
@@ -96,8 +110,8 @@ jobs:
                           "drwtNo1": nums[0], "drwtNo2": nums[1], "drwtNo3": nums[2],
                           "drwtNo4": nums[3], "drwtNo5": nums[4], "drwtNo6": nums[5],
                           "bnusNo": nums[6],
-                          "firstWinamnt": 0,
-                          "firstPrzwnerCo": 0,
+                          "firstWinamnt": result["amount"],
+                          "firstPrzwnerCo": result["winners"],
                       }
                       with open("data/latest.json", "w", encoding="utf-8") as f:
                           json.dump(data, f, ensure_ascii=False)
