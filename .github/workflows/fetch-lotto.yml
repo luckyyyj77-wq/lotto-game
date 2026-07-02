@@ -22,12 +22,20 @@ jobs:
           import json
           import sys
           import re
+          import os
           from datetime import date
+          from bs4 import BeautifulSoup
 
           start = date(2002, 12, 7)
           today = date.today()
           round_no = (today - start).days // 7 + 1
           print(f"Target round: {round_no}")
+
+          def valid(nums):
+              # 본번호 6개 + 보너스 1개, 전부 1~45, 본번호 중복 없음
+              return (len(nums) == 7
+                      and all(1 <= n <= 45 for n in nums)
+                      and len(set(nums[:6])) == 6)
 
           def fetch_naver(r):
               url = "https://search.naver.com/search.naver"
@@ -38,56 +46,50 @@ jobs:
                   "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
               }
               resp = requests.get(url, params=params, headers=headers, timeout=15)
+              resp.encoding = "utf-8"
               print(f"Naver status: {resp.status_code}")
-
-              from bs4 import BeautifulSoup
               soup = BeautifulSoup(resp.text, "html.parser")
 
-              # 네이버 로또 위젯에서 번호 추출
-              # 방법 1: data-numbers 속성
-              nums_el = soup.find(attrs={"data-numbers": True})
-              if nums_el:
-                  raw = nums_el["data-numbers"]
-                  print(f"data-numbers: {raw}")
-
-              # 방법 2: 텍스트에서 정규식으로 번호+보너스 패턴 추출
-              text = soup.get_text()
-              # "1 2 3 4 5 6 + 7" 패턴
-              pattern = r'당첨번호.*?(\d{1,2})\D+(\d{1,2})\D+(\d{1,2})\D+(\d{1,2})\D+(\d{1,2})\D+(\d{1,2})'
-              m = re.search(pattern, text, re.DOTALL)
-              if m:
-                  nums = [int(x) for x in m.groups()]
-                  print(f"Regex match: {nums}")
-
-              # 방법 3: 클래스명으로 볼 찾기
-              candidates = []
-              for sel in [".lotto645_number", ".num_group span", ".wr_num span", "strong.num"]:
-                  els = soup.select(sel)
-                  if els:
-                      print(f"Selector '{sel}': {[e.get_text(strip=True) for e in els]}")
-                      candidates = [int(e.get_text(strip=True)) for e in els if e.get_text(strip=True).isdigit() and 1 <= int(e.get_text(strip=True)) <= 45]
-                      if len(candidates) >= 7:
-                          break
-
-              print(f"Candidates: {candidates}")
-
-              # 페이지 스니펫 저장 (디버그용)
+              # 디버그: 로또 위젯 주변 HTML 저장
+              idx = resp.text.find("win_number_box")
+              snippet = resp.text[max(0, idx - 3000):idx + 3000] if idx >= 0 else resp.text[:5000]
               with open("data/debug_naver.html", "w", encoding="utf-8") as f:
-                  f.write(resp.text[:5000])
+                  f.write(snippet)
 
-              return candidates
+              # 네이버 로또 위젯: .winning_number .ball 6개 + .bonus_number .ball 1개
+              area = soup.select_one(".win_area.type_lotto") or soup
+              main = [b.get_text(strip=True) for b in area.select(".winning_number .ball")]
+              bonus = [b.get_text(strip=True) for b in area.select(".bonus_number .ball")]
+              print(f"Balls: main={main} bonus={bonus}")
+              if len(main) != 6 or len(bonus) < 1:
+                  return None
 
-          import os
+              nums = [int(x) for x in main + bonus[:1]]
+              if not valid(nums):
+                  print("Invalid numbers, discarding")
+                  return None
+
+              # 위젯에 표시된 회차/추첨일 추출 — "1229회차 (2026.06.20.)"
+              shown_round, draw_date = r, ""
+              m = re.search(r'(\d{3,4})\s*회차\s*\((\d{4})\.(\d{2})\.(\d{2})', soup.get_text(" "))
+              if m:
+                  shown_round = int(m.group(1))
+                  draw_date = f"{m.group(2)}-{m.group(3)}-{m.group(4)}"
+                  print(f"Shown round: {shown_round} ({draw_date})")
+
+              return {"round": shown_round, "date": draw_date, "nums": nums}
+
           os.makedirs("data", exist_ok=True)
 
           for r in [round_no, round_no - 1]:
               try:
-                  nums = fetch_naver(r)
-                  if len(nums) >= 7:
+                  result = fetch_naver(r)
+                  if result:
+                      nums = result["nums"]
                       data = {
                           "returnValue": "success",
-                          "drwNo": r,
-                          "drwNoDate": "",
+                          "drwNo": result["round"],
+                          "drwNoDate": result["date"],
                           "drwtNo1": nums[0], "drwtNo2": nums[1], "drwtNo3": nums[2],
                           "drwtNo4": nums[3], "drwtNo5": nums[4], "drwtNo6": nums[5],
                           "bnusNo": nums[6],
@@ -96,7 +98,7 @@ jobs:
                       }
                       with open("data/latest.json", "w", encoding="utf-8") as f:
                           json.dump(data, f, ensure_ascii=False)
-                      print(f"Saved round {r}: {nums}")
+                      print(f"Saved round {result['round']}: {nums}")
                       sys.exit(0)
               except Exception as e:
                   print(f"Error round {r}: {e}")
