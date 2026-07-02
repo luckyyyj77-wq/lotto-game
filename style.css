@@ -8,7 +8,7 @@
 
 body {
     margin: 0;
-    padding: 58px 0 58px;
+    padding: 0;
     background: #121212;
     color: white;
     text-align: center;
@@ -18,27 +18,10 @@ body {
 }
 
 /* ===========================
-   상단 고정 배너 광고
-=========================== */
-#topAdBar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    background: #0d0d0d;
-    border-bottom: 1px solid #2a2a2a;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 58px;
-    z-index: 9999;
-}
-
-/* ===========================
    게임 페이지 — 첫 화면 꽉 채움
 =========================== */
 #gamePage {
-    min-height: calc(100dvh - 116px); /* 상단58 + 하단58 제외 */
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
 }
@@ -519,54 +502,6 @@ body {
 .guide-table tr:last-child td  { border-bottom: none; }
 
 /* ===========================
-   중간 광고
-=========================== */
-.inline-ad {
-    display: flex;
-    justify-content: center;
-    margin: 8px 0;
-}
-
-.ad-inline {
-    width: 320px;
-    height: 100px;
-}
-
-/* ===========================
-   광고 placeholder 공통
-=========================== */
-.ad-banner-placeholder {
-    background: #1a1a1a;
-    border: 1px dashed #3a3a3a;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #555;
-    font-size: 12px;
-}
-
-.ad-mobile { width: 320px; height: 50px; }
-.ad-pc     { display: none; }
-
-/* ===========================
-   하단 고정 배너
-=========================== */
-#stickyAdBar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background: #0d0d0d;
-    border-top: 1px solid #2a2a2a;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 58px;
-    z-index: 9999;
-}
-
-/* ===========================
    푸터
 =========================== */
 .footer-note {
@@ -576,26 +511,130 @@ body {
     padding: 16px 0 8px;
 }
 
+.site-footer {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 20px 16px 28px;
+    border-top: 1px solid #2a2a2a;
+    text-align: center;
+}
+
+.footer-nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 14px;
+    margin-bottom: 12px;
+}
+
+.footer-nav a {
+    font-size: 12px;
+    color: #888;
+    text-decoration: none;
+}
+
+.footer-nav a:hover { color: #2a7aff; }
+
+.footer-copy {
+    font-size: 11px;
+    color: #444;
+    margin: 0;
+    line-height: 1.7;
+}
+
+/* ===========================
+   아티클 페이지
+=========================== */
+.article-page {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 16px 32px;
+    text-align: left;
+}
+
+.article-header {
+    padding: 20px 0 6px;
+}
+
+.article-header a.home-link {
+    font-size: 13px;
+    color: #2a7aff;
+    text-decoration: none;
+}
+
+.article-page h1 {
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.4;
+    margin: 12px 0 4px;
+}
+
+.article-date {
+    font-size: 12px;
+    color: #666;
+    margin: 0 0 20px;
+}
+
+.article-page h2 {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 28px 0 10px;
+    color: #fff;
+}
+
+.article-page p,
+.article-page li {
+    font-size: 14px;
+    line-height: 1.8;
+    color: #ccc;
+}
+
+.article-page ul,
+.article-page ol {
+    padding-left: 22px;
+    margin: 8px 0 16px;
+}
+
+.article-page table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 10px 0 16px;
+}
+
+.article-page th {
+    background: #2a2a2a;
+    color: #aaa;
+    padding: 8px 10px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.article-page td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #2a2a2a;
+    text-align: center;
+    color: #ccc;
+}
+
+.article-page .note-box {
+    background: #1e1e1e;
+    border-left: 3px solid #2a7aff;
+    border-radius: 0 10px 10px 0;
+    padding: 12px 14px;
+    margin: 14px 0;
+    font-size: 13px;
+    color: #aaa;
+    line-height: 1.7;
+}
+
 /* ===========================
    PC (769px 이상)
 =========================== */
 @media (min-width: 769px) {
 
-    body {
-        padding-top: 100px;
-        padding-bottom: 100px;
-    }
-
-    #topAdBar,
-    #stickyAdBar {
-        height: 100px;
-    }
-
-    .ad-mobile { display: none; }
-    .ad-pc     { display: flex; width: 728px; height: 90px; }
-
     #gamePage {
-        min-height: calc(100dvh - 200px);
+        min-height: 100dvh;
     }
 
     #headerTitle {
@@ -650,8 +689,13 @@ body {
         font-size: 64px;
     }
 
-    .ad-inline {
-        width: 468px;
-        height: 60px;
+    .article-page {
+        max-width: 720px;
+        padding: 0 24px 40px;
     }
+
+    .article-page h1 { font-size: 26px; }
+    .article-page h2 { font-size: 19px; }
+    .article-page p,
+    .article-page li { font-size: 15px; }
 }

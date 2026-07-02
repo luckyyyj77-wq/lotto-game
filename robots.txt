@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://luckyyyj77-wq.github.io/lotto-game/sitemap.xml

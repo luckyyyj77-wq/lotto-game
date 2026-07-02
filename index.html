@@ -15,20 +15,6 @@
 
 <body>
 
-    <!-- 상단 고정 배너 광고 -->
-    <div id="topAdBar">
-        <!--
-        <ins class="adsbygoogle" style="display:block"
-             data-ad-client="ca-pub-6481527875589889"
-             data-ad-slot="XXXXXXXXXX"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-        -->
-        <div class="ad-banner-placeholder ad-mobile">광고 (320×50)</div>
-        <div class="ad-banner-placeholder ad-pc">광고 (728×90)</div>
-    </div>
-
     <!-- ① 게임 영역 — 한 화면 꽉 채움 -->
     <div id="gamePage">
 
@@ -68,11 +54,6 @@
             <button class="clear-btn" onclick="clearHistory()">기록 전체 삭제</button>
         </section>
 
-        <!-- 중간 광고 -->
-        <div class="inline-ad">
-            <div class="ad-banner-placeholder ad-inline">광고 영역 (320×100)</div>
-        </div>
-
         <!-- 2-2. 번호 출현 통계 -->
         <section class="info-section" id="sectionStats">
             <h2 class="section-title">📊 번호 출현 통계</h2>
@@ -96,11 +77,6 @@
                 <div id="compareResult"></div>
             </div>
         </section>
-
-        <!-- 중간 광고 -->
-        <div class="inline-ad">
-            <div class="ad-banner-placeholder ad-inline">광고 영역 (320×100)</div>
-        </div>
 
         <!-- 2-4. 다음 추첨 D-day -->
         <section class="info-section" id="sectionDday">
@@ -126,25 +102,42 @@
             </table>
         </section>
 
-        <div class="footer-note">
-            행운수집기 · 로또 번호는 게임으로 뽑은 참고용입니다
-        </div>
+        <!-- 2-6. 서비스 소개 -->
+        <section class="info-section" id="sectionAbout">
+            <h2 class="section-title">🎲 행운수집기는 어떤 서비스인가요?</h2>
+            <p class="section-desc" style="font-size:13px; color:#aaa; line-height:1.8; margin-bottom:10px">
+                행운수집기는 로또 번호를 "직접 뽑는 재미"에 집중한 미니게임형 번호 추첨 서비스입니다.
+                버튼 한 번으로 자동 생성되는 기존 방식과 달리, 게임을 플레이하며 공을 하나씩 수집해
+                6개의 번호를 완성합니다. 뽑은 번호는 브라우저에 자동 저장되어 언제든 다시 확인할 수 있고,
+                매주 발표되는 실제 당첨번호와 자동으로 비교해 몇 개가 일치했는지 보여줍니다.
+            </p>
+            <p class="section-desc" style="font-size:13px; color:#aaa; line-height:1.8; margin-bottom:10px">
+                이 밖에도 역대 당첨번호 기준 출현 빈도 통계, 다음 추첨일 카운트다운, 로또 구매 방법과
+                당첨금 수령 절차, 확률 이야기 등 로또와 관련된 정보 콘텐츠를 함께 제공합니다.
+                아래 가이드에서 자세한 내용을 확인해보세요.
+            </p>
+            <p class="section-desc" style="font-size:13px; color:#aaa; line-height:1.8; margin:0">
+                ⚠️ 게임으로 뽑은 번호는 재미를 위한 참고용이며, 실제 당첨을 보장하지 않습니다.
+                복권 구매는 만 19세 이상만 가능하며, 과도한 구매는 삼가세요.
+            </p>
+        </section>
 
     </main>
 
-    <!-- 하단 고정 배너 -->
-    <div id="stickyAdBar">
-        <!--
-        <ins class="adsbygoogle" style="display:block"
-             data-ad-client="ca-pub-6481527875589889"
-             data-ad-slot="XXXXXXXXXX"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-        -->
-        <div class="ad-banner-placeholder ad-mobile">광고 배너 (320×50)</div>
-        <div class="ad-banner-placeholder ad-pc">광고 배너 (728×90)</div>
-    </div>
+    <footer class="site-footer">
+        <nav class="footer-nav">
+            <a href="guide.html">로또 구매 가이드</a>
+            <a href="odds.html">로또 확률의 이해</a>
+            <a href="tax.html">당첨금 수령과 세금</a>
+            <a href="faq.html">자주 묻는 질문</a>
+            <a href="about.html">사이트 소개</a>
+            <a href="privacy.html">개인정보처리방침</a>
+        </nav>
+        <p class="footer-copy">
+            행운수집기 · 게임으로 뽑은 번호는 참고용입니다<br>
+            © 2026 행운수집기. All rights reserved.
+        </p>
+    </footer>
 
     <script src="js/game.js"></script>
     <script src="js/content.js"></script>

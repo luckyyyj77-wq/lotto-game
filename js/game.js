@@ -7,15 +7,15 @@ const luckyNumbersEl = document.getElementById('luckyNumbers');
 
 let isMobile = window.innerWidth <= 768;
 
-// 캔버스 리사이즈 — 상/하단 광고(각 58) 항상 고정, 나머지 UI 높이 빼고 캔버스 맞춤
+// 캔버스 리사이즈 — UI 높이 빼고 캔버스 맞춤
 function resizeCanvas() {
     isMobile = window.innerWidth <= 768;
     const vw = window.innerWidth;
     const vh = window.innerHeight || screen.height;
 
-    // 모바일: 상단광고(58)+하단광고(58)+헤더(44)+번호(32)+공유버튼(44)+여유(10) = 246
-    // PC:     상단광고(100)+하단광고(100)+헤더(52)+번호(40)+공유버튼(52)+여유(10) = 354
-    const uiH = isMobile ? 246 : 354;
+    // 모바일: 헤더(44)+번호(32)+공유버튼(44)+스크롤힌트(28)+여유(12) = 160
+    // PC:     헤더(52)+번호(40)+공유버튼(52)+스크롤힌트(28)+여유(12) = 184
+    const uiH = isMobile ? 160 : 184;
     const available = vh - uiH;
 
     const maxW = isMobile ? vw : Math.min(600, vw - 32);
