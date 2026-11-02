@@ -37,6 +37,27 @@ test('벽돌은 번호 45개와 꽝, 공 추가로 격자를 채운다', () => {
     assert.ok(game.bricks.every(b => b.x >= 0 && b.x + b.width <= game.W));
 });
 
+test('번호가 모든 구역에 고르게 퍼진다', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+        const game = createGame({ rng: seeded(seed) });
+        const perZone = new Map();
+        game.bricks.forEach(b => {
+            if (b.type === 'number') perZone.set(b.zone, (perZone.get(b.zone) || 0) + 1);
+        });
+        assert.strictEqual(perZone.size, 15);
+        assert.ok([...perZone.values()].every(count => count === 3));
+    }
+});
+
+test('어느 번호든 어느 구역에나 놓일 수 있다', () => {
+    const zonesOfOne = new Set();
+    for (let seed = 1; seed <= 400; seed++) {
+        const brick = createGame({ rng: seeded(seed) }).bricks.find(b => b.number === 1);
+        zonesOfOne.add(brick.zone);
+    }
+    assert.strictEqual(zonesOfOne.size, 15);
+});
+
 test('번호 배치는 판마다 달라진다', () => {
     const order = seed => createGame({ rng: seeded(seed) }).bricks.map(b => b.number).join();
     assert.notStrictEqual(order(1), order(2));

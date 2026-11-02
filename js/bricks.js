@@ -6,9 +6,10 @@
     const { gravity } = LottoPhysics;
 
     const ROW_COLORS = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#4dabf7', '#b197fc'];
+    const rowColor = row => ROW_COLORS[Math.floor(row / 2) % ROW_COLORS.length];
     const HUD_Y = 26;
     const HUD_SPACING = 46;
-    const BUTTON = { x: 105, y: 340, w: 190, h: 50 };
+    const BUTTON = { x: 105, y: 400, w: 190, h: 50 };
     const PICK_ANIM_STEPS = 24;
     const POPUP_STEPS = 45;
     const DEBRIS_PER_BRICK = 8;
@@ -50,7 +51,7 @@
                 vx: (Math.random() - 0.5) * 4,
                 vy: -Math.random() * 3,
                 size: 2 + Math.random() * 3,
-                color: ROW_COLORS[brick.row],
+                color: rowColor(brick.row),
                 life: 40
             });
         }
@@ -116,12 +117,12 @@
         if (brick.broken) return;
 
         ctx.globalAlpha = done ? 0.45 : 1;
-        ctx.fillStyle = ROW_COLORS[brick.row];
+        ctx.fillStyle = rowColor(brick.row);
         ctx.beginPath();
-        ctx.roundRect(brick.x, brick.y, brick.width, brick.height, 5);
+        ctx.roundRect(brick.x, brick.y, brick.width, brick.height, 4);
         ctx.fill();
         ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-        ctx.fillRect(brick.x + 4, brick.y + 3, brick.width - 8, 3);
+        ctx.fillRect(brick.x + 4, brick.y + 2, brick.width - 8, 2);
 
         // 깨기 전에는 번호를 보여 주지 않는다. 끝난 뒤에는 어디에 무엇이 있었는지 공개한다
         ctx.font = font;
@@ -216,11 +217,11 @@
         if (sim.state === 'done') {
             ctx.fillStyle = 'rgba(10, 10, 20, 0.82)';
             ctx.beginPath();
-            ctx.roundRect(30, 290, VIEW_W - 60, 114, 12);
+            ctx.roundRect(30, 350, VIEW_W - 60, 114, 12);
             ctx.fill();
             ctx.fillStyle = 'white';
             ctx.font = uiFont(13, 17);
-            ctx.fillText('번호 완성! 아래에 저장됐어요', VIEW_W / 2, 314);
+            ctx.fillText('번호 완성! 아래에 저장됐어요', VIEW_W / 2, 374);
             ctx.fillStyle = '#2a7aff';
             ctx.beginPath();
             ctx.roundRect(BUTTON.x, BUTTON.y, BUTTON.w, BUTTON.h, 25);
@@ -237,8 +238,8 @@
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
             ctx.fillStyle = 'white';
             lines.forEach((line, i) => {
-                ctx.strokeText(line, VIEW_W / 2, 400 + i * 26);
-                ctx.fillText(line, VIEW_W / 2, 400 + i * 26);
+                ctx.strokeText(line, VIEW_W / 2, 420 + i * 26);
+                ctx.fillText(line, VIEW_W / 2, 420 + i * 26);
             });
         }
     }

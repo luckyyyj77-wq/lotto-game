@@ -9,14 +9,18 @@
     const W = 400;
     const H = 600;
     const NUMBER_COUNT = 45;
-    const DUD_COUNT = 6;        // 꽝: 깨져도 번호가 없다
+    const DUD_COUNT = 72;       // 꽝: 깨져도 번호가 없다
     const MULTI_COUNT = 3;      // 공 추가
     const PICK_COUNT = 6;
 
-    const COLS = 9;
-    const ROWS = 6;
+    const COLS = 10;
+    const ROWS = 12;
+    // 격자를 2x4칸 구역 15개로 나누고 구역마다 번호를 3개씩 넣어, 번호가 한쪽에 몰리지 않게 한다
+    const ZONE_COLS = 2;
+    const ZONE_ROWS = 4;
+    const NUMBERS_PER_ZONE = 3;
     const BRICK_GAP = 3;
-    const BRICK_H = 24;
+    const BRICK_H = 18;
     const BRICK_TOP = 64;
     const BRICK_MARGIN = 6;
     const BRICK_W = (W - BRICK_MARGIN * 2 - BRICK_GAP * (COLS - 1)) / COLS;
@@ -25,9 +29,9 @@
     const PADDLE = { y: 556, width: 84, height: 14, speed: 8 };
     const MAX_BOUNCE_ANGLE = Math.PI / 3;
 
-    const START_SPEED = 5.5;
-    const SPEED_PER_BRICK = 0.06;
-    const MAX_SPEED = 9;        // 벽돌 높이 + 공 지름보다 작아 공이 벽돌을 뚫지 않는다
+    const START_SPEED = 4.5;
+    const SPEED_PER_BRICK = 0.03;
+    const MAX_SPEED = 7;        // 벽돌 높이 + 공 지름보다 작아 공이 벽돌을 뚫지 않는다
     const MIN_VERTICAL = 0.3;   // 공이 거의 수평으로 오래 왕복하지 않게 한다
     const MIN_HORIZONTAL = 0.12; // 비어 있는 칸에서 위아래로만 영원히 왕복하지 않게 한다
     const EXTRA_BALLS = 2;
@@ -42,21 +46,42 @@
     }
 
     function buildBricks(rng) {
-        const contents = [];
-        for (let n = 1; n <= NUMBER_COUNT; n++) contents.push({ type: 'number', number: n });
-        for (let i = 0; i < DUD_COUNT; i++) contents.push({ type: 'dud', number: null });
-        for (let i = 0; i < MULTI_COUNT; i++) contents.push({ type: 'multi', number: null });
-        shuffle(contents, rng);
+        const numbers = [];
+        for (let n = 1; n <= NUMBER_COUNT; n++) numbers.push(n);
+        shuffle(numbers, rng); // 어느 번호가 어느 구역에 갈지는 완전히 무작위
 
-        return contents.map((content, i) => ({
-            ...content,
-            row: Math.floor(i / COLS),
-            x: BRICK_MARGIN + (i % COLS) * (BRICK_W + BRICK_GAP),
-            y: BRICK_TOP + Math.floor(i / COLS) * (BRICK_H + BRICK_GAP),
-            width: BRICK_W,
-            height: BRICK_H,
-            broken: false
-        }));
+        const zoneCount = (COLS / ZONE_COLS) * (ROWS / ZONE_ROWS);
+        const zones = [];
+        for (let z = 0; z < zoneCount; z++) zones.push(z);
+        const multiZones = new Set(shuffle(zones.slice(), rng).slice(0, MULTI_COUNT));
+
+        const zoneContents = zones.map(zone => {
+            const contents = [];
+            for (let i = 0; i < NUMBERS_PER_ZONE; i++) {
+                contents.push({ type: 'number', number: numbers.pop() });
+            }
+            if (multiZones.has(zone)) contents.push({ type: 'multi', number: null });
+            while (contents.length < ZONE_COLS * ZONE_ROWS) contents.push({ type: 'dud', number: null });
+            return shuffle(contents, rng);
+        });
+
+        const bricks = [];
+        for (let row = 0; row < ROWS; row++) {
+            for (let col = 0; col < COLS; col++) {
+                const zone = Math.floor(row / ZONE_ROWS) * (COLS / ZONE_COLS) + Math.floor(col / ZONE_COLS);
+                bricks.push({
+                    ...zoneContents[zone].pop(),
+                    zone,
+                    row,
+                    x: BRICK_MARGIN + col * (BRICK_W + BRICK_GAP),
+                    y: BRICK_TOP + row * (BRICK_H + BRICK_GAP),
+                    width: BRICK_W,
+                    height: BRICK_H,
+                    broken: false
+                });
+            }
+        }
+        return bricks;
     }
 
     function newBall(x, y) {
