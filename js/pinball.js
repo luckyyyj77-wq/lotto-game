@@ -8,8 +8,6 @@
     const VIEW_H = 600;
     const RES = 2;
 
-    const BALL_COLORS = ['#f0ad00', '#69c8f2', '#ff6363', '#aaaaaa', '#b0d840']; // style.css .ball.b1~b5
-    const DUMMY_COLOR = '#3c3c4c';
     const WALL_COLOR = '#7f8cff';
     const BUTTON = { x: 105, y: 490, w: 190, h: 50 };
     const HUD_Y = 26;
@@ -17,12 +15,10 @@
     const RAIL = { x: 388, top: 56, bottom: 586 };
     const PICK_ANIM_STEPS = 24;
     const MIN_DRAG_RADIUS = 25;
-    const TICK_INTERVAL_MS = 70;
 
     let sim = createGame();
     let camera = newCamera();
     let dragAngle = null;
-    let lastTickTime = 0;
 
     function newCamera() {
         return createCamera({ viewW: VIEW_W, viewH: VIEW_H, worldW: WORLD_W, worldH: WORLD_H });
@@ -61,26 +57,8 @@
     // 캔버스 픽셀 좌표 → 화면 단위
     const toView = coords => ({ x: coords.x / RES, y: coords.y / RES });
 
-    function playTick() {
-        if (isMuted || !audioCtx || document.hidden || !isCanvasInView()) return;
-        const now = performance.now();
-        if (now - lastTickTime < TICK_INTERVAL_MS) return;
-        lastTickTime = now;
-
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.type = 'sine';
-        osc.frequency.value = 1300 + Math.random() * 500;
-        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.05);
-    }
-
     function handleEvent(event) {
-        if (event.type === 'peg' || event.type === 'bumper') playTick();
+        if (event.type === 'peg' || event.type === 'bumper') playTickSound();
         else if (event.type === 'release' || event.type === 'gate') playGrabSound();
         else if (event.type === 'pick') {
             playSlotSound();
@@ -98,38 +76,10 @@
     }
 
     // ---------- 렌더링 ----------
-    function ballColor(number) {
-        if (number === null) return DUMMY_COLOR;
-        return BALL_COLORS[Math.min(4, Math.floor((number - 1) / 10))];
-    }
-
     // 실제 화면에서 글자가 읽히는 크기를 공 크기 안에서 맞춘다
     function ballFont() {
         const screenScale = displayScale * RES * camera.zoom;
         return `bold ${Math.max(9, Math.min(15, Math.round(11 / screenScale)))}px Arial`;
-    }
-
-    function drawBall(x, y, radius, number, font) {
-        ctx.fillStyle = ballColor(number);
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.beginPath();
-        ctx.arc(x - radius * 0.3, y - radius * 0.3, radius * 0.35, 0, Math.PI * 2);
-        ctx.fill();
-
-        if (number !== null) {
-            ctx.font = font;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.lineWidth = 2.5;
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
-            ctx.fillStyle = 'white';
-            ctx.strokeText(number, x, y + 0.5);
-            ctx.fillText(number, x, y + 0.5);
-        }
     }
 
     function drawLine(x1, y1, x2, y2, color, width) {
@@ -244,7 +194,7 @@
         const font = ballFont();
         sim.balls.forEach(ball => {
             if (ball.y < top - 20 || ball.y > bottom + 20) return;
-            drawBall(ball.x, ball.y, ball.radius, ball.number, font);
+            drawNumberBall(ball.x, ball.y, ball.radius, ball.number, font);
         });
 
         // 카메라가 따라가는 공 표시
@@ -276,7 +226,7 @@
         sim.picked.forEach((pick, i) => {
             const t = Math.min(1, (sim.stepCount - pick.step) / PICK_ANIM_STEPS);
             const eased = t * (2 - t);
-            drawBall(
+            drawNumberBall(
                 start.x + (slotX(i) - start.x) * eased,
                 start.y + (HUD_Y - start.y) * eased,
                 15,
@@ -299,7 +249,7 @@
 
         sim.balls.forEach(ball => {
             if (ball.number === null) return;
-            ctx.fillStyle = ballColor(ball.number);
+            ctx.fillStyle = numberBallColor(ball.number);
             ctx.beginPath();
             ctx.arc(RAIL.x, railY(ball.y), 3, 0, Math.PI * 2);
             ctx.fill();

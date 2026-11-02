@@ -21,6 +21,8 @@ lotto-game/
 │   ├── pinball-core.js   바구니 핀볼 시뮬레이션 (화면 없음, Node에서 실행 가능)
 │   ├── pinball-camera.js 바구니 핀볼 카메라 (선두 무리 추적, 줌)
 │   ├── pinball.js        바구니 핀볼 입력·화면
+│   ├── bricks-core.js    행운 벽돌깨기 시뮬레이션 (화면 없음)
+│   ├── bricks.js         행운 벽돌깨기 입력·화면
 │   └── content.js        콘텐츠 로직 (기록·통계·당첨번호·D-day)
 ├── data/                 GitHub Actions가 매주 자동 갱신
 │   ├── draws.json        전 회차 당첨 정보 (회차당 한 줄)
@@ -28,7 +30,7 @@ lotto-game/
 │   └── stats.json        번호별 본번호 출현 횟수
 ├── scripts/
 │   └── fetch_lotto.py    당첨번호 수집기
-├── tests/                node --test tests/draw-time.test.js tests/pinball.test.js
+├── tests/                node --test tests/draw-time.test.js tests/pinball.test.js tests/bricks.test.js
 │                         python -m unittest discover tests
 ├── guide.html            로또 구매 가이드 (정보 콘텐츠)
 ├── odds.html             로또 확률의 이해
@@ -80,6 +82,18 @@ lotto-game/
   잠깐 기다렸다가 옮겨 간다. 안착하면 결승선을 잠시 비춘 뒤 다음 무리로 돌아가며, 멀면 줌아웃했다가
   다시 당긴다. 방식은 [lazygyu/roulette](https://github.com/lazygyu/roulette)(MIT)를 참고해 직접 구현했다
 - **막힘 해제**: 구조물 위에 멈춘 공은 1초 뒤 살짝 튕긴다. 바구니와 수문 저수지에서 기다리는 공은 제외
+
+### 행운 벽돌깨기 (js/bricks-core.js, js/bricks.js)
+
+벽돌 54개(번호 45, 꽝 6, 공 추가 3)를 패들로 튕긴 공으로 깨서, 먼저 깬 번호 6개를 뽑는다.
+
+- **공정성**: 내용물을 벽돌 위치에 무작위로 섞고 끝날 때까지 화면에 표시하지 않는다.
+  벽돌 모양을 내용물에 따라 달리하면 노려서 뽑을 수 있게 되므로 금지
+- **공유 범위**: 공 크기와 공끼리 충돌만 `physics.js`를 쓴다. 공 비행에는 중력을 적용하지 않고
+  (중력 0.5로는 공이 벽돌까지 올라가지 못한다), 파편 효과에만 쓴다
+- **실패 없음**: 공을 놓쳐도 뽑은 번호는 유지하고 다시 발사한다. 번호를 뽑는 것이 목적이기 때문이다
+- **궤도 보정**: 공 속도를 일정하게 맞추고, 수평·수직으로만 도는 궤도는 살짝 기울인다.
+  수직 보정이 없으면 빈 칸에서 위아래로만 왕복해 게임이 끝나지 않는다
 
 ### 콘텐츠 (js/content.js)
 

@@ -253,6 +253,28 @@ function playExplodeSound() {
     osc.stop(audioCtx.currentTime + 0.5);
 }
 
+// 짧은 충돌음. 자주 울리므로 간격을 제한하고, 화면이 보일 때만 낸다
+const TICK_INTERVAL_MS = 70;
+let lastTickTime = 0;
+
+function playTickSound() {
+    if (isMuted || !audioCtx || document.hidden || !isCanvasInView()) return;
+    const now = performance.now();
+    if (now - lastTickTime < TICK_INTERVAL_MS) return;
+    lastTickTime = now;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = 1300 + Math.random() * 500;
+    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.05);
+}
+
 // 소리 온오프
 function updateMuteBtn() {
     const btn = document.getElementById('muteBtn');
@@ -703,6 +725,37 @@ function update() {
 // 작은 화면에서도 읽히도록 표시 크기에 맞춘 글꼴 (캔버스 내부 좌표 기준 px)
 function scaledFont(displayPx, maxPx) {
     return `bold ${Math.round(Math.min(maxPx, displayPx / displayScale))}px Arial`;
+}
+
+// 번호 공 하나 그리기 (number가 null이면 더미). 색은 style.css .ball.b1~b5와 같다
+const NUMBER_BALL_COLORS = ['#f0ad00', '#69c8f2', '#ff6363', '#aaaaaa', '#b0d840'];
+
+function numberBallColor(number) {
+    if (number === null) return '#3c3c4c';
+    return NUMBER_BALL_COLORS[Math.min(4, Math.floor((number - 1) / 10))];
+}
+
+function drawNumberBall(x, y, radius, number, font) {
+    ctx.fillStyle = numberBallColor(number);
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.beginPath();
+    ctx.arc(x - radius * 0.3, y - radius * 0.3, radius * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (number !== null) {
+        ctx.font = font;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
+        ctx.fillStyle = 'white';
+        ctx.strokeText(number, x, y + 0.5);
+        ctx.fillText(number, x, y + 0.5);
+    }
 }
 
 function renderHint() {
