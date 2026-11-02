@@ -5,13 +5,18 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const luckyNumbersEl = document.getElementById('luckyNumbers');
 
-let isMobile = window.innerWidth <= 768;
+// 모바일에서 window.innerWidth는 넘치는 콘텐츠만큼 커지므로 레이아웃 폭(clientWidth)을 쓴다
+const viewportWidth = () => document.documentElement.clientWidth || window.innerWidth;
+const viewportHeight = () => document.documentElement.clientHeight || window.innerHeight;
+
+let isMobile = viewportWidth() <= 768;
+let displayScale = 1; // 화면 표시 폭 / 캔버스 내부 폭(600)
 
 // 캔버스 리사이즈 — UI 높이 빼고 캔버스 맞춤
 function resizeCanvas() {
-    isMobile = window.innerWidth <= 768;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight || screen.height;
+    const vw = viewportWidth();
+    const vh = viewportHeight();
+    isMobile = vw <= 768;
 
     // 모바일: 헤더(44)+번호(32)+공유버튼(44)+스크롤힌트(28)+여유(12) = 160
     // PC:     헤더(52)+번호(40)+공유버튼(52)+스크롤힌트(28)+여유(12) = 184
@@ -25,6 +30,14 @@ function resizeCanvas() {
 
     canvas.style.width = finalW + 'px';
     canvas.style.height = finalH + 'px';
+    displayScale = finalW / canvas.width;
+}
+
+// 게임 화면이 보이는 동안에만 방향키 조작·BGM을 적용한다 (아래 콘텐츠를 읽는 중에는 방해하지 않도록)
+function isCanvasInView() {
+    const rect = canvas.getBoundingClientRect();
+    const center = rect.top + rect.height / 2;
+    return center > 0 && center < window.innerHeight;
 }
 
 resizeCanvas();
@@ -38,7 +51,10 @@ window.addEventListener('orientationchange', () => {
 // ==============================
 let audioCtx;
 let bgmStarted = false;
-let isMuted = localStorage.getItem('lotto_muted') === 'true';
+let isMuted = false;
+try {
+    isMuted = localStorage.getItem('lotto_muted') === 'true';
+} catch { /* 저장소를 쓸 수 없는 브라우저 — 기본값 사용 */ }
 
 function initAudioContext() {
     if (!audioCtx) {
@@ -137,7 +153,7 @@ function startBGM() {
         if (!playing) return;
         initAudioContext();
 
-        if (!isMuted) {
+        if (!isMuted && !document.hidden && isCanvasInView()) {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
 
@@ -248,7 +264,9 @@ function updateMuteBtn() {
 
 function toggleMute() {
     isMuted = !isMuted;
-    localStorage.setItem('lotto_muted', isMuted);
+    try {
+        localStorage.setItem('lotto_muted', isMuted);
+    } catch { /* 저장소를 쓸 수 없는 브라우저 — 이번 방문에만 적용 */ }
     updateMuteBtn();
 }
 window.toggleMute = toggleMute;
@@ -278,12 +296,13 @@ const slotStartX = 30;
 const slotStartY = 30;
 const slotSize = 13;
 const slotSpacing = 32.5;
+const slotCatchRadius = 30; // 맨 위에서 훅과 슬롯 높이 차가 16이므로, 좌우로 약 ±25 안에서 들어간다
 
 for (let i = 0; i < 6; i++) {
     slots.push({
         x: slotStartX + (i * slotSpacing),
         y: slotStartY,
-        radius: slotSize + 5,
+        radius: slotCatchRadius,
         filled: false
     });
 }
@@ -308,7 +327,9 @@ const bombZone = {
 };
 
 const keys = {};
-let touchActive = false;
+const ARROW_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+let hasGrabbedBall = false; // 첫 공을 잡기 전까지 조작 안내 표시
+let bombArmed = true;       // 폭탄에서 벗어나야 다시 터진다
 
 // =====================
 // 4. 유틸 함수들
@@ -370,6 +391,11 @@ setInterval(() => {
 // 5. 입력 처리
 // =====================
 document.addEventListener('keydown', (e) => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (ARROW_KEYS.has(e.key)) {
+        if (!isCanvasInView()) return; // 콘텐츠를 읽는 중에는 원래대로 스크롤
+        e.preventDefault();
+    }
     keys[e.key] = true;
     if (e.key === 'r' || e.key === 'R') {
         resetPlayerPosition();
@@ -412,7 +438,6 @@ function getCanvasCoordinates(e) {
 // 터치 / 마우스 → 부드러운 타겟 이동
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    touchActive = true;
     const coords = getCanvasCoordinates(e);
     player.targetX = coords.x;
     player.targetY = coords.y;
@@ -427,13 +452,11 @@ canvas.addEventListener('touchmove', (e) => {
 
 canvas.addEventListener('touchend', (e) => {
     e.preventDefault();
-    touchActive = false;
     player.targetX = null;
     player.targetY = null;
 });
 
 canvas.addEventListener('mousedown', (e) => {
-    touchActive = true;
     const coords = getCanvasCoordinates(e);
     player.targetX = coords.x;
     player.targetY = coords.y;
@@ -447,8 +470,8 @@ canvas.addEventListener('mousemove', (e) => {
     }
 });
 
-canvas.addEventListener('mouseup', () => {
-    touchActive = false;
+// 캔버스 밖에서 버튼을 놓아도 드래그가 끝나도록 window에서 받는다
+window.addEventListener('mouseup', () => {
     player.targetX = null;
     player.targetY = null;
 });
@@ -456,12 +479,10 @@ canvas.addEventListener('mouseup', () => {
 // =====================
 // 6. 폭발 / 폭탄 처리
 // =====================
-function explodeAllBalls(isNuclear = false) {
+function explodeAllBalls() {
     playExplodeSound();
 
     balls.forEach(ball => {
-        if (!isNuclear && ball.inSlot) return;
-
         for (let i = 0; i < 8; i++) {
             const angle = (Math.PI * 2 * i) / 8;
             debris.push({
@@ -477,25 +498,13 @@ function explodeAllBalls(isNuclear = false) {
         }
     });
 
-    if (isNuclear) {
-        balls.length = 0;
-        player.caughtBalls.length = 0;
-        player.heldBall = null;
-        slots.forEach(slot => (slot.filled = false));
-        usedNumbers.clear();
-        luckyNumbersEl.textContent = '';
-        document.getElementById('shareButtons').classList.remove('visible');
-    } else {
-        for (let i = balls.length - 1; i >= 0; i--) {
-            if (!balls[i].inSlot) {
-                if (balls[i].isNumberBall && balls[i].number) {
-                    usedNumbers.delete(balls[i].number);
-                }
-                balls.splice(i, 1);
-            }
-        }
-        player.heldBall = null;
-    }
+    balls.length = 0;
+    player.caughtBalls.length = 0;
+    player.heldBall = null;
+    slots.forEach(slot => (slot.filled = false));
+    usedNumbers.clear();
+    luckyNumbersEl.textContent = '';
+    document.getElementById('shareButtons').classList.remove('visible');
 
     isSpawning = false;
     cooldownTimer = 300;
@@ -509,9 +518,11 @@ function checkBombZone() {
     const distance = Math.sqrt((px - bx) ** 2 + (py - by) ** 2);
 
     // 폭탄 판정 조금 좁게
-    if (distance < bombZone.size / 2) {
-        explodeAllBalls(true);
+    const onBomb = distance < bombZone.size / 2;
+    if (onBomb && bombArmed) {
+        explodeAllBalls();
     }
+    bombArmed = !onBomb;
 }
 
 // =====================
@@ -624,6 +635,7 @@ function update() {
             ball.onGround
         ) {
             player.heldBall = ball;
+            hasGrabbedBall = true;
             playGrabSound();
         }
 
@@ -706,14 +718,6 @@ function update() {
         }
     }
 
-    // 화면이 공으로 너무 꽉 찼으면 자동 폭발
-    const screenArea = canvas.width * canvas.height;
-    const ballsArea = activeBalls.length * Math.PI * ballRadius * ballRadius;
-    const fillRatio = ballsArea / screenArea;
-    if (fillRatio > 0.7) {
-        explodeAllBalls();
-    }
-
     if (cooldownTimer > 0) {
         cooldownTimer--;
         if (cooldownTimer === 0) {
@@ -732,6 +736,33 @@ function update() {
 // =====================
 // 8. 렌더링
 // =====================
+// 작은 화면에서도 읽히도록 표시 크기에 맞춘 글꼴 (캔버스 내부 좌표 기준 px)
+function scaledFont(displayPx, maxPx) {
+    return `bold ${Math.round(Math.min(maxPx, displayPx / displayScale))}px Arial`;
+}
+
+function renderHint() {
+    let lines = null;
+    if (!hasGrabbedBall) {
+        lines = ['바닥의 번호 공에 우산 갈고리를 대고', '왼쪽 위 칸으로 옮기세요 · 폭탄은 다시 시작'];
+    } else if (player.caughtBalls.length === player.maxBalls) {
+        lines = ['번호 완성! 아래에 저장됐어요', '폭탄에 닿으면 새 번호를 뽑을 수 있어요'];
+    }
+    if (!lines || cooldownTimer > 0) return;
+
+    ctx.font = scaledFont(12, 20);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#000';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    lines.forEach((line, i) => {
+        const y = canvas.height / 2 + (i - 0.5) * 28;
+        ctx.strokeText(line, canvas.width / 2, y);
+        ctx.fillText(line, canvas.width / 2, y);
+    });
+}
+
 function render() {
     ctx.fillStyle = 'rgba(26, 26, 46, 0.15)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -825,7 +856,7 @@ function render() {
             ctx.fill();
 
             ctx.fillStyle = 'white';
-            ctx.font = 'bold 10px Arial';
+            ctx.font = scaledFont(11, 15);
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.strokeStyle = '#000';
@@ -858,7 +889,7 @@ function render() {
 
         if (ball.isNumberBall) {
             ctx.fillStyle = 'white';
-            ctx.font = 'bold 10px Arial';
+            ctx.font = scaledFont(11, 15);
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.strokeStyle = '#000';
@@ -954,6 +985,8 @@ function render() {
         ctx.font = '20px Arial';
         ctx.fillText('초 후 재시작...', canvas.width / 2, canvas.height / 2 + 40);
     }
+
+    renderHint();
 }
 
 // =====================
@@ -988,7 +1021,7 @@ function copyToClipboard(text) {
     }
 }
 
-window.shareKakao = function () {
+window.shareNumbers = function () {
     if (player.caughtBalls.length < 6) {
         alert('6개의 번호를 모두 모아주세요!');
         return;
@@ -1033,16 +1066,6 @@ window.shareTwitter = function () {
     window.open(url, '_blank');
 };
 
-window.shareFacebook = function () {
-    if (player.caughtBalls.length < 6) {
-        alert('6개의 번호를 모두 모아주세요!');
-        return;
-    }
-    const url =
-        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`;
-    window.open(url, '_blank');
-};
-
 window.copyLink = function () {
     if (player.caughtBalls.length < 6) {
         alert('6개의 번호를 모두 모아주세요!');
@@ -1075,8 +1098,21 @@ window.copyLink = function () {
 // =====================
 // 11. 메인 루프
 // =====================
-function gameLoop() {
-    update();
+// 물리는 초당 60회 고정 — 화면 주사율(120Hz 등)과 무관하게 같은 속도로 동작
+const STEP_MS = 1000 / 60;
+const MAX_FRAME_MS = 100; // 탭 복귀 등 긴 공백을 한꺼번에 처리하지 않도록 제한
+let lastFrameTime = null;
+let stepBacklog = 0;
+
+function gameLoop(time) {
+    if (lastFrameTime === null) lastFrameTime = time;
+    stepBacklog += Math.min(time - lastFrameTime, MAX_FRAME_MS);
+    lastFrameTime = time;
+
+    while (stepBacklog >= STEP_MS) {
+        update();
+        stepBacklog -= STEP_MS;
+    }
     render();
     requestAnimationFrame(gameLoop);
 }
@@ -1092,4 +1128,4 @@ function gameLoop() {
     }, { passive: false });
 })();
 
-gameLoop();
+requestAnimationFrame(gameLoop);

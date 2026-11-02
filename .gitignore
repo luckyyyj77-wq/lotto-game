@@ -1,0 +1,4 @@
+.claude/
+data/debug_naver.html
+__pycache__/
+*.pyc

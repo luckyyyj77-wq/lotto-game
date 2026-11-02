@@ -15,12 +15,27 @@ function renderBall(n, extra) {
     return `<span class="ball ${getBallClass(n)} ${cls}">${n}</span>`;
 }
 
+function loadHistory() {
+    try {
+        const history = JSON.parse(localStorage.getItem('lotto_history') || '[]');
+        return Array.isArray(history) ? history : [];
+    } catch {
+        return [];
+    }
+}
+
 function saveHistory(numbers) {
-    const history = JSON.parse(localStorage.getItem('lotto_history') || '[]');
-    const today = new Date().toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' });
-    history.unshift({ date: today, numbers: [...numbers].sort((a, b) => a - b) });
+    const history = loadHistory();
+    const now = new Date();
+    history.unshift({
+        date: now.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+        round: purchaseRound(now.getTime()),
+        numbers: [...numbers].sort((a, b) => a - b)
+    });
     if (history.length > 20) history.pop();
-    localStorage.setItem('lotto_history', JSON.stringify(history));
+    try {
+        localStorage.setItem('lotto_history', JSON.stringify(history));
+    } catch { /* 저장소를 쓸 수 없는 브라우저 — 기록 없이 게임만 진행 */ }
     renderHistory();
     updateCompare();
 }
@@ -30,7 +45,7 @@ let historyExpanded = false;
 function renderHistory() {
     const el = document.getElementById('historyList');
     if (!el) return;
-    const history = JSON.parse(localStorage.getItem('lotto_history') || '[]');
+    const history = loadHistory();
 
     if (history.length === 0) {
         el.innerHTML = '<p class="empty-msg">아직 뽑은 번호가 없어요.<br>게임을 플레이해보세요!</p>';
@@ -43,7 +58,7 @@ function renderHistory() {
 
     el.innerHTML = history.slice(0, showCount).map(item => `
         <div class="history-item">
-            <span class="history-date">${item.date}</span>
+            <span class="history-date">${item.date}${item.round ? ` · 제 ${item.round}회 대상` : ''}</span>
             <div class="history-balls">
                 ${item.numbers.map(n => renderBall(n)).join('')}
             </div>
@@ -65,24 +80,18 @@ function toggleHistory() {
 
 function clearHistory() {
     if (!confirm('기록을 모두 삭제할까요?')) return;
-    localStorage.removeItem('lotto_history');
+    try {
+        localStorage.removeItem('lotto_history');
+    } catch { /* 저장소를 쓸 수 없는 브라우저 */ }
     renderHistory();
     document.getElementById('myNumberCompare').style.display = 'none';
 }
 
 // ===========================
-// 번호 통계 (역대 출현 빈도)
+// 번호 통계 (data/stats.json — 전 회차 본번호 집계)
 // ===========================
 
-// 역대 로또 당첨번호 출현 횟수 (1~1149회 집계, 2024년 기준 근사값)
-const FREQ = {
-    1:156,2:165,3:163,4:157,5:160,6:166,7:175,8:162,9:155,10:174,
-    11:176,12:172,13:168,14:170,15:178,16:164,17:171,18:180,19:159,20:173,
-    21:177,22:169,23:183,24:158,25:185,26:167,27:174,28:179,29:161,30:176,
-    31:182,32:170,33:188,34:163,35:175,36:184,37:166,38:178,39:160,40:172,
-    41:186,42:165,43:179,44:158,45:162
-};
-
+let lottoStats = null;
 let currentTab = 'hot';
 
 function showStats(type) {
@@ -95,14 +104,13 @@ function showStats(type) {
 
 function renderStats(type) {
     const el = document.getElementById('statsChart');
-    if (!el) return;
+    if (!el || !lottoStats) return;
 
-    const sorted = Object.entries(FREQ)
-        .map(([n, c]) => ({ n: +n, c }))
+    const all = Object.entries(lottoStats.counts).map(([n, c]) => ({ n: +n, c }));
+    const max = Math.max(...all.map(item => item.c));
+    const sorted = all
         .sort((a, b) => type === 'hot' ? b.c - a.c : a.c - b.c)
         .slice(0, 10);
-
-    const max = sorted[0].c;
 
     el.innerHTML = sorted.map(({ n, c }) => `
         <div class="stat-row">
@@ -116,65 +124,40 @@ function renderStats(type) {
     `).join('');
 }
 
-// ===========================
-// 최신 당첨번호 (동행복권 API)
-// ===========================
-
-function calcRound() {
-    const start = new Date('2002-12-07');
-    const now = new Date();
-    let round = Math.floor((now - start) / (7 * 24 * 60 * 60 * 1000)) + 1;
-    const day = now.getDay();
-    const hour = now.getHours();
-    if (day < 6 || (day === 6 && hour < 21)) round -= 1;
-    return round;
-}
-
-async function tryFetch(round) {
-    const apiUrl = `https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo=${round}`;
-    const proxies = [
-        `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
-        `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`,
-    ];
-
-    for (const url of proxies) {
-        try {
-            const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-            const raw = await res.json();
-            const data = raw.contents ? JSON.parse(raw.contents) : raw;
-            if (data.returnValue === 'success') return data;
-        } catch { /* 다음 프록시 시도 */ }
+async function fetchStats() {
+    const el = document.getElementById('statsChart');
+    const note = document.getElementById('statsNote');
+    if (!el) return;
+    try {
+        const res = await fetch('./data/stats.json', { cache: 'no-cache' });
+        if (!res.ok) throw new Error(res.status);
+        lottoStats = await res.json();
+    } catch {
+        el.innerHTML = '<p class="loading-msg">통계를 불러올 수 없어요.<br>잠시 후 다시 확인해주세요.</p>';
+        return;
     }
-    return null;
+    renderStats(currentTab);
+    if (note) {
+        note.textContent = `* 1회 ~ ${lottoStats.lastRound}회(${lottoStats.lastDate}) 본번호 기준, 보너스 번호 제외`;
+    }
 }
+
+// ===========================
+// 최신 당첨번호 (data/latest.json — GitHub Actions가 갱신)
+// ===========================
 
 async function fetchLatestLotto() {
     const el = document.getElementById('latestResult');
     if (!el) return;
 
-    // 1순위: GitHub Actions가 저장한 로컬 JSON (CORS 없음, 안정적)
     let data = null;
     try {
-        const res = await fetch('./data/latest.json', { signal: AbortSignal.timeout(3000) });
+        const res = await fetch('./data/latest.json', { cache: 'no-cache' });
         if (res.ok) {
             const json = await res.json();
-            if (json.returnValue === 'success') {
-                const cachedRound = json.drwNo;
-                const currentRound = calcRound();
-                // 캐시가 최신 회차 또는 직전 회차면 사용
-                if (cachedRound >= currentRound - 1) {
-                    data = json;
-                }
-            }
+            if (json.returnValue === 'success') data = json;
         }
-    } catch { /* 로컬 파일 없으면 프록시로 폴백 */ }
-
-    // 2순위: 프록시 폴백
-    if (!data) {
-        let round = calcRound();
-        data = await tryFetch(round);
-        if (!data) data = await tryFetch(round - 1);
-    }
+    } catch { /* 아래에서 안내 문구 표시 */ }
 
     if (!data) {
         el.innerHTML = `<p class="loading-msg">당첨번호를 불러올 수 없어요.<br>잠시 후 다시 확인해주세요.</p>`;
@@ -184,6 +167,9 @@ async function fetchLatestLotto() {
     const nums = [data.drwtNo1, data.drwtNo2, data.drwtNo3, data.drwtNo4, data.drwtNo5, data.drwtNo6];
     const bonus = data.bnusNo;
     const prize = Math.round(data.firstWinamnt / 100000000 * 10) / 10;
+    // 당첨자가 0이면 1등 정보를 수집하지 못한 경우로 본다
+    const hasPrize = data.firstPrzwnerCo > 0;
+    const expected = latestDrawnRound(Date.now());
 
     el.innerHTML = `
         <p class="latest-round">제 ${data.drwNo}회 (${data.drwNoDate})</p>
@@ -193,14 +179,25 @@ async function fetchLatestLotto() {
             ${renderBall(bonus, 'ball-bonus')}
         </div>
         <div class="latest-prize">
-            <div class="prize-item">1등 당첨자<strong>${data.firstPrzwnerCo}명</strong></div>
-            <div class="prize-item">1등 당첨금<strong>${prize}억 원</strong></div>
+            <div class="prize-item">1등 당첨자<strong>${hasPrize ? `${data.firstPrzwnerCo}명` : '—'}</strong></div>
+            <div class="prize-item">1등 당첨금<strong>${hasPrize ? `${prize}억 원` : '—'}</strong></div>
         </div>
+        ${data.drwNo < expected ? `<p class="stale-note">제 ${expected}회 결과는 아직 반영되지 않았어요. 잠시 후 다시 확인해주세요.</p>` : ''}
     `;
 
+    window._latestRound = data.drwNo;
     window._latestNums = nums;
     window._latestBonus = bonus;
     updateCompare();
+}
+
+function getRank(matchCount, bonusMatch) {
+    if (matchCount === 6) return '🎉 1등!';
+    if (matchCount === 5 && bonusMatch) return '🥈 2등!';
+    if (matchCount === 5) return '🥉 3등!';
+    if (matchCount === 4) return '4등 (5만원)';
+    if (matchCount === 3) return '5등 (5천원)';
+    return '낙첨';
 }
 
 function updateCompare() {
@@ -208,26 +205,33 @@ function updateCompare() {
     const compareResult = document.getElementById('compareResult');
     if (!compareArea || !compareResult) return;
 
-    const history = JSON.parse(localStorage.getItem('lotto_history') || '[]');
+    const history = loadHistory();
     if (!history.length || !window._latestNums) return;
 
-    const myNums = history[0].numbers;
-    const matched = myNums.filter(n => window._latestNums.includes(n));
+    const countMatches = item => item.numbers.filter(n => window._latestNums.includes(n)).length;
+    // 이번 회차 추첨 전에 뽑은 번호만 등수를 매긴다. 없으면 최근 기록들을 참고용으로 비교한다.
+    const eligible = history.filter(item => item.round === window._latestRound);
+    const pool = eligible.length ? eligible : history;
+    const best = pool.reduce((a, b) => countMatches(b) > countMatches(a) ? b : a);
+
+    const myNums = best.numbers;
+    const matchCount = countMatches(best);
     const bonusMatch = myNums.includes(window._latestBonus);
 
-    let rank = '낙첨';
-    if (matched.length === 6) rank = '🎉 1등!';
-    else if (matched.length === 5 && bonusMatch) rank = '🥈 2등!';
-    else if (matched.length === 5) rank = '🥉 3등!';
-    else if (matched.length === 4) rank = '4등 (5만원)';
-    else if (matched.length === 3) rank = '5등 (5천원)';
+    const resultText = eligible.length
+        ? `${getRank(matchCount, bonusMatch)} · ${matchCount}개 일치`
+        : `${matchCount}개 일치`;
+    const noteText = eligible.length
+        ? `제 ${window._latestRound}회 추첨 전에 뽑은 기록 ${eligible.length}개 중 가장 많이 일치한 번호입니다.`
+        : `제 ${window._latestRound}회 추첨 전에 뽑은 기록이 없어 참고용으로만 비교합니다. 실제 당첨과는 무관합니다.`;
 
     compareArea.style.display = 'block';
     compareResult.innerHTML = `
         <div class="history-balls" style="justify-content:center;margin-bottom:8px">
             ${myNums.map(n => `<span class="ball ${getBallClass(n)}" style="${window._latestNums.includes(n) ? 'outline:2px solid #fff' : 'opacity:0.35'}">${n}</span>`).join('')}
         </div>
-        <p style="margin:0;color:${matched.length >= 3 ? '#f0ad00' : '#666'};font-size:15px">${rank} · ${matched.length}개 일치</p>
+        <p style="margin:0;color:${eligible.length && matchCount >= 3 ? '#f0ad00' : '#666'};font-size:15px">${resultText}</p>
+        <p class="compare-note">${noteText}</p>
     `;
 }
 
@@ -240,12 +244,8 @@ function renderDday() {
     const dateEl = document.getElementById('ddayDate');
     if (!el) return;
 
-    const now = new Date();
-    const day = now.getDay(); // 0=일, 6=토
-    const daysUntilSat = day === 6 ? 7 : (6 - day);
-    const next = new Date(now);
-    next.setDate(now.getDate() + daysUntilSat);
-    next.setHours(20, 45, 0, 0);
+    const now = Date.now();
+    const next = nextDrawTimeMs(now);
 
     const diff = next - now;
     const d = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -254,16 +254,16 @@ function renderDday() {
 
     el.textContent = d > 0 ? `D-${d}` : `${h}시간 ${m}분`;
 
-    const dateStr = next.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
-    if (dateEl) dateEl.textContent = `추첨일: ${dateStr} 오후 8시 45분`;
+    const dateStr = new Date(next).toLocaleDateString('ko-KR', {
+        month: 'long', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul'
+    });
+    if (dateEl) dateEl.textContent = `추첨일: ${dateStr} 오후 8시 35분경 (한국 시간)`;
 }
 
 // ===========================
 // game.js 연동 — 번호 완성 시 저장
 // ===========================
 
-// game.js의 슬롯 완성 이벤트를 감지해 기록 저장
-const _origDispatch = EventTarget.prototype.dispatchEvent;
 window.addEventListener('lottoComplete', e => {
     if (e.detail && e.detail.numbers) {
         saveHistory(e.detail.numbers);
@@ -276,7 +276,7 @@ window.addEventListener('lottoComplete', e => {
 
 document.addEventListener('DOMContentLoaded', () => {
     renderHistory();
-    renderStats('hot');
+    fetchStats();
     fetchLatestLotto();
     renderDday();
     setInterval(renderDday, 60000);

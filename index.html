@@ -2,10 +2,17 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>행운수집기 — 로또 번호 뽑기 미니게임</title>
     <meta name="description" content="재미있는 미니게임으로 로또 번호를 뽑아보세요. 내 번호 기록, 통계, 당첨번호 비교까지!" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href="https://luckyyyj77-wq.github.io/lotto-game/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="행운수집기" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:title" content="행운수집기 — 로또 번호 뽑기 미니게임" />
+    <meta property="og:description" content="재미있는 미니게임으로 로또 번호를 뽑아보세요. 내 번호 기록, 통계, 당첨번호 비교까지!" />
+    <meta property="og:url" content="https://luckyyyj77-wq.github.io/lotto-game/" />
     <link rel="stylesheet" href="style.css" />
 
     <!-- Google AdSense -->
@@ -30,7 +37,7 @@
         <div id="luckyNumbers"></div>
 
         <div id="shareButtons">
-            <button onclick="shareKakao()">카카오로 공유</button>
+            <button onclick="shareNumbers()">공유하기</button>
             <button onclick="shareTwitter()">트위터</button>
             <button onclick="copyLink()">링크 복사</button>
         </div>
@@ -62,8 +69,10 @@
                 <button class="tab-btn active" onclick="showStats('hot')">🔥 자주 나온 번호</button>
                 <button class="tab-btn" onclick="showStats('cold')">🧊 적게 나온 번호</button>
             </div>
-            <div id="statsChart" class="stats-chart"></div>
-            <p class="stats-note">* 데이터: 1회 ~ 최신 회차 기준</p>
+            <div id="statsChart" class="stats-chart">
+                <p class="loading-msg">불러오는 중...</p>
+            </div>
+            <p class="stats-note" id="statsNote"></p>
         </section>
 
         <!-- 2-3. 이번 회차 당첨번호 -->
@@ -139,6 +148,7 @@
         </p>
     </footer>
 
+    <script src="js/draw-time.js"></script>
     <script src="js/game.js"></script>
     <script src="js/content.js"></script>
 </body>
