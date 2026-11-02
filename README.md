@@ -16,7 +16,10 @@ lotto-game/
 ├── favicon.svg
 ├── js/
 │   ├── draw-time.js      회차·추첨 시각 계산 (KST 고정, 순수 함수)
-│   ├── game.js           캔버스 게임 엔진
+│   ├── physics.js        두 게임이 공유하는 물리 (중력·반발·공 충돌)
+│   ├── game.js           캔버스·소리·입력·게임 전환 + 공 수집 게임
+│   ├── pinball-core.js   바구니 핀볼 시뮬레이션 (화면 없음, Node에서 실행 가능)
+│   ├── pinball.js        바구니 핀볼 입력·화면
 │   └── content.js        콘텐츠 로직 (기록·통계·당첨번호·D-day)
 ├── data/                 GitHub Actions가 매주 자동 갱신
 │   ├── draws.json        전 회차 당첨 정보 (회차당 한 줄)
@@ -24,7 +27,7 @@ lotto-game/
 │   └── stats.json        번호별 본번호 출현 횟수
 ├── scripts/
 │   └── fetch_lotto.py    당첨번호 수집기
-├── tests/                node --test tests/draw-time.test.js
+├── tests/                node --test tests/draw-time.test.js tests/pinball.test.js
 │                         python -m unittest discover tests
 ├── guide.html            로또 구매 가이드 (정보 콘텐츠)
 ├── odds.html             로또 확률의 이해
@@ -53,6 +56,24 @@ lotto-game/
 9. **번호/공유** — 6개 완성 시 `lottoComplete` CustomEvent 발생, 기기 공유(미지원 시 복사)/트위터/링크 공유
 
 물리는 `gameLoop`에서 초당 60회 고정 스텝으로 돈다. 쿨다운 등 프레임 단위 값은 이 기준이다.
+
+### 게임 전환
+
+`game.js`의 `games` 객체에 게임을 등록하면 상단 "게임 바꾸기" 버튼이 차례로 순환한다.
+각 게임은 `width·height`(캔버스 크기), `update·render`, `pointerDown·pointerMove·pointerUp`,
+`getNumbers`(완성 전 `null`)를 제공하고, 완성되면 `announceNumbers()`를 호출한다.
+게임을 바꿔도 각 게임의 진행 상태는 유지된다.
+
+### 바구니 핀볼 (js/pinball-core.js, js/pinball.js)
+
+번호 공 45개 + 더미 20개를 바구니에서 흔들고(게이지 충전) 내려보내, 출구에 먼저 도착한
+번호 공 6개를 뽑는다. 더미는 그냥 통과한다. 캔버스는 세로 400x600.
+
+- **공정성**: 물리는 번호를 보지 않고, 시작 위치와 처리 순서를 무작위로 섞는다.
+  번호에 따라 물리를 달리하는 코드를 넣으면 이 성질이 깨진다 (`tests/pinball.test.js`가 확인)
+- **출구 폭**: 깔때기 경사 때문에 공 중심이 지나는 실제 폭은 `neckWidth`보다 약 48 좁다.
+  너무 줄이면 공 두 개가 끼어 멈추므로, 바꾸면 테스트의 "막히지 않고" 항목을 확인할 것
+- **막힘 해제**: 구조물 위에 멈춘 공은 1초 뒤 살짝 튕기고, 출구가 오래 막히면 근처 공을 흔든다
 
 ### 콘텐츠 (js/content.js)
 

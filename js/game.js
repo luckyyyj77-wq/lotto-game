@@ -4,6 +4,7 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const luckyNumbersEl = document.getElementById('luckyNumbers');
+const { gravity, bounce, ballRadius, collideBalls } = LottoPhysics;
 
 // 모바일에서 window.innerWidth는 넘치는 콘텐츠만큼 커지므로 레이아웃 폭(clientWidth)을 쓴다
 const viewportWidth = () => document.documentElement.clientWidth || window.innerWidth;
@@ -23,10 +24,13 @@ function resizeCanvas() {
     const uiH = isMobile ? 160 : 184;
     const available = vh - uiH;
 
+    // 게임마다 캔버스 비율이 다르다 (수집 게임 가로 600x400, 핀볼 세로 400x600)
+    const ratio = canvas.width / canvas.height;
+    const minH = ratio < 1 ? 360 : 160;
     const maxW = isMobile ? vw : Math.min(600, vw - 32);
-    const aspectH = Math.round(maxW * (400 / 600));
-    const finalH = Math.max(160, Math.min(aspectH, available));
-    const finalW = Math.round(finalH * (600 / 400));
+    const aspectH = Math.round(maxW / ratio);
+    const finalH = Math.max(minH, Math.min(aspectH, available));
+    const finalW = Math.round(finalH * ratio);
 
     canvas.style.width = finalW + 'px';
     canvas.style.height = finalH + 'px';
@@ -308,9 +312,6 @@ for (let i = 0; i < 6; i++) {
 }
 
 const balls = [];
-const ballRadius = 10;
-const gravity = 0.5;
-const bounce = 0.6;
 const maxActiveBalls = 100;
 
 let isSpawning = true;
@@ -379,7 +380,7 @@ function createBall() {
 
 // 공 스폰 타이머
 setInterval(() => {
-    if (isSpawning) {
+    if (isSpawning && currentGame === games.collector) {
         const activeBalls = balls.filter(b => !b.inSlot).length;
         if (activeBalls < maxActiveBalls) {
             createBall();
@@ -397,8 +398,10 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
     }
     keys[e.key] = true;
-    if (e.key === 'r' || e.key === 'R') {
-        resetPlayerPosition();
+    // 버튼·링크에 초점이 있으면 스페이스·엔터는 그 요소의 동작으로 둔다
+    const onControl = e.target.closest && e.target.closest('button, a, input, select, textarea');
+    if (currentGame.onKey && !onControl && isCanvasInView() && !e.repeat) {
+        if (currentGame.onKey(e.key)) e.preventDefault();
     }
 });
 
@@ -435,45 +438,35 @@ function getCanvasCoordinates(e) {
     };
 }
 
-// 터치 / 마우스 → 부드러운 타겟 이동
+// 터치 / 마우스 입력은 현재 게임으로 넘긴다
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    const coords = getCanvasCoordinates(e);
-    player.targetX = coords.x;
-    player.targetY = coords.y;
+    currentGame.pointerDown(getCanvasCoordinates(e));
 });
 
 canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
-    const coords = getCanvasCoordinates(e);
-    player.targetX = coords.x;
-    player.targetY = coords.y;
+    currentGame.pointerMove(getCanvasCoordinates(e));
 });
 
 canvas.addEventListener('touchend', (e) => {
     e.preventDefault();
-    player.targetX = null;
-    player.targetY = null;
+    currentGame.pointerUp();
 });
 
 canvas.addEventListener('mousedown', (e) => {
-    const coords = getCanvasCoordinates(e);
-    player.targetX = coords.x;
-    player.targetY = coords.y;
+    currentGame.pointerDown(getCanvasCoordinates(e));
 });
 
 canvas.addEventListener('mousemove', (e) => {
     if (e.buttons === 1) {
-        const coords = getCanvasCoordinates(e);
-        player.targetX = coords.x;
-        player.targetY = coords.y;
+        currentGame.pointerMove(getCanvasCoordinates(e));
     }
 });
 
 // 캔버스 밖에서 버튼을 놓아도 드래그가 끝나도록 window에서 받는다
 window.addEventListener('mouseup', () => {
-    player.targetX = null;
-    player.targetY = null;
+    currentGame.pointerUp();
 });
 
 // =====================
@@ -503,8 +496,7 @@ function explodeAllBalls() {
     player.heldBall = null;
     slots.forEach(slot => (slot.filled = false));
     usedNumbers.clear();
-    luckyNumbersEl.textContent = '';
-    document.getElementById('shareButtons').classList.remove('visible');
+    syncResultUI();
 
     isSpawning = false;
     cooldownTimer = 300;
@@ -586,7 +578,7 @@ function update() {
                         playSlotSound();
 
                         if (player.caughtBalls.length === 6) {
-                            updateLuckyNumbers();
+                            announceNumbers();
                         }
                         break;
                     }
@@ -669,35 +661,7 @@ function update() {
             const ball1 = activeBalls[i];
             const ball2 = activeBalls[j];
 
-            const dx = ball2.x - ball1.x;
-            const dy = ball2.y - ball1.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const minDist = ball1.radius + ball2.radius;
-
-            if (distance < minDist && distance > 0) {
-                const angle = Math.atan2(dy, dx);
-                const sin = Math.sin(angle);
-                const cos = Math.cos(angle);
-
-                const overlap = minDist - distance;
-                const moveX = (overlap / 2) * cos;
-                const moveY = (overlap / 2) * sin;
-
-                ball1.x -= moveX;
-                ball1.y -= moveY;
-                ball2.x += moveX;
-                ball2.y += moveY;
-
-                const vx1 = ball1.vx * cos + ball1.vy * sin;
-                const vy1 = ball1.vy * cos - ball1.vx * sin;
-                const vx2 = ball2.vx * cos + ball2.vy * sin;
-                const vy2 = ball2.vy * cos - ball2.vx * sin;
-
-                ball1.vx = vx2 * cos - vy1 * sin;
-                ball1.vy = vy1 * cos + vx2 * sin;
-                ball2.vx = vx1 * cos - vy2 * sin;
-                ball2.vy = vy2 * cos + vx1 * sin;
-
+            if (collideBalls(ball1, ball2)) {
                 if (Math.abs(ball1.vy) > 0.5) ball1.onGround = false;
                 if (Math.abs(ball2.vy) > 0.5) ball2.onGround = false;
             }
@@ -992,17 +956,19 @@ function render() {
 // =====================
 // 9. 로또 번호 / 공유
 // =====================
-function updateLuckyNumbers() {
-    const numbers = player.caughtBalls
-        .map(ball => ball.number)
-        .sort((a, b) => a - b)
-        .join(', ');
-    luckyNumbersEl.textContent = numbers;
-    if (player.caughtBalls.length === 6) {
-        document.getElementById('shareButtons').classList.add('visible');
-        const nums = player.caughtBalls.map(b => b.number).sort((a, b) => a - b);
-        window.dispatchEvent(new CustomEvent('lottoComplete', { detail: { numbers: nums } }));
-    }
+// 현재 게임의 완성 번호를 화면에 반영한다 (게임을 바꿀 때도 호출)
+function syncResultUI() {
+    const numbers = currentGame.getNumbers();
+    luckyNumbersEl.textContent = numbers ? numbers.join(', ') : '';
+    document.getElementById('shareButtons').classList.toggle('visible', !!numbers);
+}
+
+// 6개 완성 시 호출 — 표시를 갱신하고 기록으로 넘긴다
+function announceNumbers() {
+    syncResultUI();
+    window.dispatchEvent(new CustomEvent('lottoComplete', {
+        detail: { numbers: currentGame.getNumbers() }
+    }));
 }
 
 function copyToClipboard(text) {
@@ -1021,16 +987,19 @@ function copyToClipboard(text) {
     }
 }
 
-window.shareNumbers = function () {
-    if (player.caughtBalls.length < 6) {
+// 공유할 번호 문자열. 아직 6개가 안 됐으면 안내 후 null
+function numbersForShare() {
+    const numbers = currentGame.getNumbers();
+    if (!numbers) {
         alert('6개의 번호를 모두 모아주세요!');
-        return;
+        return null;
     }
+    return numbers.join(', ');
+}
 
-    const numbers = player.caughtBalls
-        .map(ball => ball.number)
-        .sort((a, b) => a - b)
-        .join(', ');
+window.shareNumbers = function () {
+    const numbers = numbersForShare();
+    if (!numbers) return;
     const text =
         `🍀 행운수집기로 뽑은 내 행운 번호!\n${numbers}\n\n당신도 행운을 만들어보세요!`;
 
@@ -1050,15 +1019,8 @@ window.shareNumbers = function () {
 };
 
 window.shareTwitter = function () {
-    if (player.caughtBalls.length < 6) {
-        alert('6개의 번호를 모두 모아주세요!');
-        return;
-    }
-
-    const numbers = player.caughtBalls
-        .map(ball => ball.number)
-        .sort((a, b) => a - b)
-        .join(', ');
+    const numbers = numbersForShare();
+    if (!numbers) return;
     const text =
         `🍀 행운수집기로 뽑은 내 행운 번호!\n${numbers}\n당신도 행운을 만들어보세요!`;
     const url =
@@ -1067,15 +1029,8 @@ window.shareTwitter = function () {
 };
 
 window.copyLink = function () {
-    if (player.caughtBalls.length < 6) {
-        alert('6개의 번호를 모두 모아주세요!');
-        return;
-    }
-
-    const numbers = player.caughtBalls
-        .map(ball => ball.number)
-        .sort((a, b) => a - b)
-        .join(', ');
+    const numbers = numbersForShare();
+    if (!numbers) return;
     const text =
         `🍀 행운수집기로 뽑은 내 행운 번호!\n${numbers}\n\n${window.location.href}`;
     copyToClipboard(text);
@@ -1096,7 +1051,69 @@ window.copyLink = function () {
 });
 
 // =====================
-// 11. 메인 루프
+// 11. 게임 목록 / 전환
+// =====================
+// 각 게임은 width·height(캔버스 크기), update·render, 입력 처리, getNumbers를 제공한다.
+// 다른 게임은 js/pinball.js처럼 스크립트에서 games에 추가한다.
+const games = {
+    collector: {
+        name: '공 수집',
+        width: 600,
+        height: 400,
+        update,
+        render,
+        pointerDown(coords) {
+            player.targetX = coords.x;
+            player.targetY = coords.y;
+        },
+        pointerMove(coords) {
+            player.targetX = coords.x;
+            player.targetY = coords.y;
+        },
+        pointerUp() {
+            player.targetX = null;
+            player.targetY = null;
+        },
+        onKey(key) {
+            if (key === 'r' || key === 'R') resetPlayerPosition();
+            return false;
+        },
+        getNumbers() {
+            if (player.caughtBalls.length < player.maxBalls) return null;
+            return player.caughtBalls.map(ball => ball.number).sort((a, b) => a - b);
+        }
+    }
+};
+let currentGame = games.collector;
+
+window.switchGame = function () {
+    const list = Object.values(games);
+    currentGame.pointerUp();
+    Object.keys(keys).forEach(key => { keys[key] = false; });
+
+    currentGame = list[(list.indexOf(currentGame) + 1) % list.length];
+    canvas.width = currentGame.width;
+    canvas.height = currentGame.height;
+    resizeCanvas();
+    syncResultUI();
+    updateSwitchBtn();
+
+    // 버튼에 초점이 남으면 스페이스가 게임 대신 버튼을 다시 누른다
+    const btn = document.getElementById('gameSwitchBtn');
+    if (btn) btn.blur();
+};
+
+function updateSwitchBtn() {
+    const btn = document.getElementById('gameSwitchBtn');
+    if (!btn) return;
+    const list = Object.values(games);
+    const next = list[(list.indexOf(currentGame) + 1) % list.length];
+    btn.setAttribute('aria-label', `게임 바꾸기: ${next.name} 게임으로`);
+    btn.title = `${next.name} 게임으로 바꾸기`;
+}
+
+// =====================
+// 12. 메인 루프
 // =====================
 // 물리는 초당 60회 고정 — 화면 주사율(120Hz 등)과 무관하게 같은 속도로 동작
 const STEP_MS = 1000 / 60;
@@ -1110,10 +1127,10 @@ function gameLoop(time) {
     lastFrameTime = time;
 
     while (stepBacklog >= STEP_MS) {
-        update();
+        currentGame.update();
         stepBacklog -= STEP_MS;
     }
-    render();
+    currentGame.render();
     requestAnimationFrame(gameLoop);
 }
 
