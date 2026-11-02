@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>운인가, 통계인가 — 계산과 실제를 맞춰 봤습니다 | 행운수집기</title>
+    <meta name="description" content="연속번호, 홀짝, 직전 회차 번호. 수학으로 계산한 값과 실제 1,248회 결과는 얼마나 같을까요?" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href="https://lucky-collector.com/story-luck.html" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="행운수집기" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:title" content="운인가, 통계인가 — 계산과 실제를 맞춰 봤습니다 | 행운수집기" />
+    <meta property="og:description" content="연속번호, 홀짝, 직전 회차 번호. 수학으로 계산한 값과 실제 1,248회 결과는 얼마나 같을까요?" />
+    <meta property="og:url" content="https://lucky-collector.com/story-luck.html" />
+    <link rel="stylesheet" href="style.css" />
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6481527875589889"
+            crossorigin="anonymous"></script>
+</head>
+<body>
+
+<main class="article-page">
+    <div class="article-header">
+        <a class="home-link" href="stories.html">← 읽을거리 목록</a>
+        <h1>운인가, 통계인가 — 계산과 실제를 맞춰 봤습니다</h1>
+        <p class="article-date">행운수집기 읽을거리 · 자체 분석 · 2026년 11월 작성</p>
+    </div>
+
+    <p>
+        "이번엔 연속번호가 나올 차례다", "홀짝은 3:3이 정석이다" 같은 말을 자주 듣습니다. 모두 근거 있는 비법처럼 들리지만, 실제로는 무작위 추첨에서 저절로 생기는 모습인 경우가 많습니다. 수학으로 계산한 값과 실제 기록을 나란히 놓아 봤습니다.
+    </p>
+
+    <table>
+        <thead><tr><th>현상</th><th>계산값</th><th>실제(1,248회)</th></tr></thead>
+        <tbody>
+            <tr><td>연속번호가 한 쌍 이상</td><td>52.9%</td><td>51.8%</td></tr>
+            <tr><td>홀수 3개, 짝수 3개</td><td>33.5%</td><td>33.2%</td></tr>
+            <tr><td>직전 회차 번호가 1개 이상 또 나옴</td><td>59.9%</td><td>61.4%</td></tr>
+            <tr><td>6개 모두 31 이하</td><td>9.0%</td><td>8.7%</td></tr>
+        </tbody>
+    </table>
+
+    <p>
+        놀라울 만큼 비슷합니다. 연속번호는 두 번에 한 번꼴로 나오고, 직전 회차 번호가 다시 나오는 일도 열에 여섯은 됩니다. 신기한 패턴이 아니라, 45개에서 6개를 뽑으면 원래 그렇게 되는 것입니다.
+    </p>
+
+    <h2>"홀짝 3:3"이 많다고 3:3을 골라야 할까</h2>
+
+    <p>
+        3:3이 가장 흔한 까닭은 그런 조합의 가짓수가 가장 많기 때문입니다. 조합 하나하나의 확률은 모두 같습니다. 1, 2, 3, 4, 5, 6도 어떤 3:3 조합과 똑같이 8,145,060분의 1입니다. "흔한 유형"과 "잘 나오는 조합"은 다른 말입니다.
+    </p>
+
+    <h2>큰 수의 법칙과 도박사의 오류</h2>
+
+    <p>
+        회차가 쌓일수록 실제 결과가 계산값에 가까워지는 현상이 큰 수의 법칙입니다. 그런데 이 법칙을 "오래 안 나온 번호가 곧 나와서 균형을 맞춘다"로 오해하기 쉽습니다. 이것이 도박사의 오류입니다. 균형은 부족한 번호가 더 나와서 맞춰지는 것이 아니라, 회차가 많아지면서 초반 차이가 전체에서 차지하는 비중이 줄어들어 맞춰집니다.
+    </p>
+
+    <p>
+        지금까지 1,248회 동안 똑같은 6개 조합이 다시 나온 적은 한 번도 없습니다. 그렇다고 지난 조합이 다시 나올 수 없는 것도 아닙니다. 조합 수가 워낙 많아서 아직 안 나왔을 뿐입니다.
+    </p>
+
+    <div class="note-box">결론: 패턴은 분명히 보이지만, 대부분 확률이 만든 모습입니다. 예측에 쓸 수 있는 정보는 아닙니다. 확률 계산 과정은 <a href="story-math.html" style="color:#2a7aff">8,145,060은 어떻게 나올까</a>에서 볼 수 있습니다.</div>
+
+    <section class="story-sources">
+        <h2>참고 자료</h2>
+        <ul>
+            <li><a href="https://lucky-collector.com/data/draws.json" rel="noopener" target="_blank">행운수집기 자체 집계: 1~1,248회 당첨번호 (data/draws.json, 원자료는 동행복권 공개 데이터)</a></li>
+        </ul>
+        <p>통계는 2026년 10월 31일 추첨(1,248회)까지의 자료 기준입니다. 이 글은 재미와 정보를 위한 것으로, 당첨을 보장하거나 구매를 권하지 않습니다.</p>
+    </section>
+
+    <nav class="story-nav" aria-label="다른 글">
+        <a href="story-bias.html">← 많이 나온 번호는 다음에도 잘 나올까</a>
+        <a href="story-records.html">63명이 함께 1등 한 날 — 기록으로 보는 로또 →</a>
+    </nav>
+
+    <footer class="site-footer">
+        <nav class="footer-nav">
+            <a href="index.html">홈</a>
+            <a href="stories.html">읽을거리</a>
+            <a href="guide.html">로또 구매 가이드</a>
+            <a href="odds.html">로또 확률의 이해</a>
+            <a href="tax.html">당첨금 수령과 세금</a>
+            <a href="faq.html">자주 묻는 질문</a>
+            <a href="about.html">사이트 소개</a>
+            <a href="privacy.html">개인정보처리방침</a>
+        </nav>
+        <p class="footer-copy">© 2026 행운수집기. All rights reserved.</p>
+    </footer>
+</main>
+
+</body>
+</html>

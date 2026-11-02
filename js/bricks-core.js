@@ -34,6 +34,7 @@
     const MAX_SPEED = 7;        // 벽돌 높이 + 공 지름보다 작아 공이 벽돌을 뚫지 않는다
     const MIN_VERTICAL = 0.3;   // 공이 거의 수평으로 오래 왕복하지 않게 한다
     const MIN_HORIZONTAL = 0.12; // 비어 있는 칸에서 위아래로만 영원히 왕복하지 않게 한다
+    const STALL_STEPS = 600;    // 10초 동안 아무것도 못 맞히면 받침이 남은 벽돌 쪽으로 튕겨 준다
     const EXTRA_BALLS = 2;
     const MAX_BALLS = 6;
 
@@ -110,15 +111,16 @@
         const game = {
             W,
             H,
-            state: 'ready',      // ready(공이 패들 위) → playing → done
+            state: 'ready',      // ready(공이 패들 위) → playing → done → (이어하기) → cleared
+            continuing: false,   // 이어하기 중. 번호는 더 뽑지 않고 벽돌을 다 깨면 클리어
             paddle: { ...PADDLE, x: W / 2 },
             paddleTarget: null,
             balls: [],
             bricks: buildBricks(rng),
             picked: [],
-            lastSet: null,       // 가장 최근에 완성한 번호 6개
-            setCount: 0,
+            lastSet: null,       // 완성한 번호 6개 (한 판에 한 번만 정해진다)
             brokenCount: 0,
+            lastHitStep: 0,      // 마지막으로 벽돌을 맞힌 시점. 같은 궤도만 도는 정체를 감지한다
             stepCount: 0,
             capsules: [],
             shots: [],
@@ -131,15 +133,13 @@
             return game.effects.slow > 0 ? base * SLOW_FACTOR : base;
         };
 
-        const remainingNumbers = () =>
-            game.bricks.filter(b => b.type === 'number' && !b.broken).length;
+        game.canContinue = () => game.state === 'done' && !game.continuing;
 
-        game.canContinue = () => game.state === 'done' && remainingNumbers() >= PICK_COUNT;
-
-        // 같은 판을 이어 간다. 남은 벽돌의 내용물은 그대로 두고 기믹만 입힌다
+        // 같은 판을 이어 간다. 남은 벽돌의 내용물은 그대로 두고 기믹만 입힌다.
+        // 번호는 이미 정해졌으므로 이후로는 게임을 클리어하는 재미만 남는다
         game.continueGame = () => {
             if (!game.canContinue()) return false;
-            game.picked = [];
+            game.continuing = true;
             game.capsules = [];
             game.shots = [];
             game.effects = { wide: 0, slow: 0, laser: 0 };
@@ -160,6 +160,7 @@
 
         game.launch = () => {
             if (game.state !== 'ready') return false;
+            game.lastHitStep = game.stepCount;
             const ball = game.balls[0];
             const angle = (rng() - 0.5) * (Math.PI / 6);
             ball.vx = Math.sin(angle) * game.speed();
@@ -197,6 +198,7 @@
         const current = Math.hypot(ball.vx, ball.vy) || 1;
         ball.vx *= speed / current;
         ball.vy *= speed / current;
+        if (ball.aimed) return;
         const minVy = speed * MIN_VERTICAL;
         if (Math.abs(ball.vy) < minVy) {
             ball.vy = (ball.vy < 0 ? -1 : 1) * minVy;
@@ -240,7 +242,20 @@
         if (hit) events.push({ type: 'wall' });
     }
 
-    function collidePaddle(game, ball, events) {
+    // 정체 중이면 남은 벽돌 하나를 향해 곧장 튕긴다. 길을 막는 벽돌이 있으면 그 벽돌이 맞는다
+    function aimAtRemainingBrick(game, ball, rng, speed) {
+        const alive = game.bricks.filter(b => !b.broken);
+        if (alive.length === 0) return;
+        const brick = alive[Math.floor(rng() * alive.length)];
+        const dx = brick.x + brick.width / 2 - ball.x;
+        const dy = brick.y + brick.height / 2 - ball.y;
+        const distance = Math.hypot(dx, dy) || 1;
+        ball.vx = (dx / distance) * speed;
+        ball.vy = (dy / distance) * speed;
+        ball.aimed = true; // 궤도 보정이 방향을 틀면 벽돌을 비껴가므로 맞힐 때까지 보정하지 않는다
+    }
+
+    function collidePaddle(game, ball, rng, events) {
         const paddle = game.paddle;
         const halfWidth = paddle.width / 2 + ball.radius;
         const offset = ball.x - paddle.x;
@@ -256,6 +271,7 @@
         ball.vx = Math.sin(angle) * speed;
         ball.vy = -Math.cos(angle) * speed;
         ball.y = paddle.y - ball.radius;
+        if (game.stepCount - game.lastHitStep > STALL_STEPS) aimAtRemainingBrick(game, ball, rng, speed);
         events.push({ type: 'paddle' });
     }
 
@@ -276,6 +292,7 @@
         if (!best) return;
 
         const { brick, px, py, distance } = best;
+        ball.aimed = false;
         // 중심이 벽돌 안으로 들어갔으면 가까운 위아래 면으로 내보낸다
         let nx = 0;
         let ny = ball.y < brick.y + brick.height / 2 ? -1 : 1;
@@ -295,6 +312,7 @@
 
     // 단단한 벽돌은 여러 번 맞아야 깨진다. source는 공이나 광선
     function damageBrick(game, brick, source, events) {
+        game.lastHitStep = game.stepCount;
         brick.hits--;
         if (brick.hits > 0) events.push({ type: 'hardHit', brick });
         else breakBrick(game, brick, source, events);
@@ -327,7 +345,7 @@
             events.push({ type: 'multi', brick });
         } else if (brick.type === 'dud') {
             events.push({ type: 'dud', brick });
-        } else if (game.picked.length < PICK_COUNT) {
+        } else if (!game.continuing && game.picked.length < PICK_COUNT) {
             game.picked.push({
                 number: brick.number,
                 x: brick.x + brick.width / 2,
@@ -337,10 +355,14 @@
             events.push({ type: 'pick', number: brick.number, brick });
             if (game.picked.length === PICK_COUNT) {
                 game.state = 'done';
-                game.setCount++;
                 game.lastSet = game.numbers().sort((a, b) => a - b);
                 events.push({ type: 'complete', numbers: game.numbers() });
             }
+        }
+
+        if (game.continuing && game.bricks.every(b => b.broken)) {
+            game.state = 'cleared';
+            events.push({ type: 'clear' });
         }
     }
 
@@ -391,7 +413,7 @@
             const brick = game.bricks.find(b => !b.broken
                 && shot.x >= b.x && shot.x <= b.x + b.width
                 && shot.y >= b.y && shot.y <= b.y + b.height);
-            if (!brick || game.state === 'done') return true;
+            if (!brick || game.state !== 'playing') return true;
             damageBrick(game, brick, shot, events);
             return false;
         });
@@ -414,21 +436,21 @@
             ball.y = PADDLE.y - ballRadius - 1;
             return events;
         }
-        if (game.state === 'done') return events;
+        if (game.state !== 'playing') return events;
 
         updateEffects(game);
         updateCapsules(game, rng, events);
         updateLaser(game, events);
-        if (game.state === 'done') return events;
+        if (game.state !== 'playing') return events;
 
         const speed = game.speed();
         for (const ball of game.balls) {
             ball.x += ball.vx;
             ball.y += ball.vy;
             collideWalls(ball, events);
-            collidePaddle(game, ball, events);
+            collidePaddle(game, ball, rng, events);
             collideBricks(game, ball, events);
-            if (game.state === 'done') return events;
+            if (game.state !== 'playing') return events;
         }
 
         for (let i = 0; i < game.balls.length; i++) {

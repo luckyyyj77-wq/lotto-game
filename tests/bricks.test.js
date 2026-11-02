@@ -17,7 +17,7 @@ function seeded(seed) {
 // 가장 낮은 공을 패들로 따라가는 자동 플레이어. skew는 패들 중심에서 비껴 맞히는 정도
 function autoPlay(game, skew = 0, limit = 36000, onStep = null) {
     let steps = 0;
-    while (game.state !== 'done' && steps < limit) {
+    while (game.state !== 'done' && game.state !== 'cleared' && steps < limit) {
         if (game.state === 'ready') game.launch();
         const lowest = game.balls.reduce((a, b) => (b.y > a.y ? b : a));
         game.setPaddleTarget(lowest.x + skew);
@@ -138,6 +138,62 @@ test('패들 정중앙에만 맞혀도 공이 수직으로 고착되지 않고 �
     }
 });
 
+test('한참 못 맞히면 받침이 남은 벽돌 쪽으로 튕겨 준다', () => {
+    const game = createGame({ rng: seeded(61) });
+    game.bricks.forEach((brick, i) => {
+        if (i !== 0) brick.broken = true;
+    });
+    game.lastSet = [1, 2, 3, 4, 5, 6];
+    game.state = 'done';
+    game.continueGame();
+    game.launch();
+    const target = game.bricks[0];
+    target.hits = 1;
+    const ball = game.balls[0];
+    ball.x = 300;
+    ball.y = game.paddle.y - 30;
+    ball.vx = 0.5;
+    ball.vy = 6;
+    game.paddle.x = 300;
+    game.setPaddleTarget(300);
+    game.lastHitStep = game.stepCount - 1000;
+    for (let i = 0; i < 10; i++) game.step();
+    assert.ok(ball.vy < 0);
+    assert.ok(ball.vx < 0, '왼쪽 위 벽돌을 향해야 한다');
+    for (let i = 0; i < 400 && game.state !== 'cleared'; i++) {
+        game.setPaddleTarget(ball.x);
+        game.step();
+    }
+    assert.strictEqual(game.state, 'cleared');
+});
+
+test('마지막 벽돌이 받침 바로 위에 있어도 겨냥한 공이 비껴가지 않는다', () => {
+    for (const brickIndex of [3, 7]) {
+        const game = createGame({ rng: seeded(71) });
+        game.bricks.forEach((brick, i) => {
+            if (i !== brickIndex) brick.broken = true;
+        });
+        game.lastSet = [1, 2, 3, 4, 5, 6];
+        game.state = 'done';
+        game.continueGame();
+        const target = game.bricks[brickIndex];
+        target.hits = 1;
+        target.item = null;
+        game.launch();
+        const center = target.x + target.width / 2;
+        const ball = game.balls[0];
+        ball.x = center + 3;
+        ball.y = game.paddle.y - 30;
+        ball.vx = 0.5;
+        ball.vy = 6;
+        game.paddle.x = center;
+        game.setPaddleTarget(center);
+        game.lastHitStep = game.stepCount - 1000;
+        for (let i = 0; i < 300 && game.state !== 'cleared'; i++) game.step();
+        assert.strictEqual(game.state, 'cleared', `벽돌 ${brickIndex}`);
+    }
+});
+
 test('공의 움직임은 벽돌에 적힌 번호와 무관하다', () => {
     for (let seed = 300; seed < 310; seed++) {
         const original = createGame({ rng: seeded(seed) });
@@ -163,9 +219,10 @@ test('이어하기는 남은 번호와 꽝을 그대로 두고 기믹만 입힌�
 
     assert.deepStrictEqual(game.bricks.map(contents), before);
     assert.strictEqual(game.state, 'ready');
-    assert.strictEqual(game.picked.length, 0);
+    assert.strictEqual(game.picked.length, 6);
     assert.strictEqual(game.brokenCount, brokenBefore);
-    assert.deepStrictEqual(game.lastSet, firstSet, '이전 세트는 다음 세트 완성 전까지 유지');
+    assert.deepStrictEqual(game.lastSet, firstSet);
+    assert.strictEqual(game.continueGame(), false, '이어하기는 한 번만');
 
     const alive = game.bricks.filter(b => !b.broken);
     const hard = alive.filter(b => b.hits > 1);
@@ -294,22 +351,29 @@ test('광선은 벽돌을 깨고 놓친 아이템은 사라진다', () => {
     assert.strictEqual(game.effects.wide, 0);
 });
 
-test('이어하기를 끝까지 하면 겹치지 않는 세트 7개가 나오고 더 이어갈 수 없다', () => {
+test('이어하기는 벽돌을 모두 깨면 클리어되고 번호는 처음 6개로 고정된다', () => {
     for (let seed = 800; seed < 815; seed++) {
         const game = createGame({ rng: seeded(seed) });
-        const sets = [];
-        for (let round = 0; round < 7; round++) {
-            autoPlay(game, 0, 72000);
-            assert.strictEqual(game.state, 'done', `seed ${seed} 세트 ${round + 1}`);
-            sets.push(game.lastSet.slice());
-            if (round < 6) assert.ok(game.continueGame(), `seed ${seed} 세트 ${round + 1}`);
+        const aim = seeded(seed + 5000);
+        autoPlay(game);
+        const firstSet = game.lastSet.slice();
+        const firstPicks = game.numbers();
+        assert.ok(game.continueGame());
+
+        const events = [];
+        for (let i = 0; i < 360000 && game.state !== 'cleared'; i++) {
+            if (game.state === 'ready') game.launch();
+            const lowest = game.balls.reduce((a, b) => (b.y > a.y ? b : a));
+            game.setPaddleTarget(lowest.x + (aim() - 0.5) * 70);
+            events.push(...game.step());
         }
-        const all = sets.flat();
-        assert.strictEqual(all.length, 42);
-        assert.strictEqual(new Set(all).size, 42, '세트끼리 번호가 겹침');
-        assert.strictEqual(game.setCount, 7);
+        assert.strictEqual(game.state, 'cleared', `seed ${seed}`);
+        assert.ok(game.bricks.every(b => b.broken));
+        assert.deepStrictEqual(game.lastSet, firstSet);
+        assert.deepStrictEqual(game.numbers(), firstPicks);
+        assert.strictEqual(events.filter(e => e.type === 'pick' || e.type === 'complete').length, 0);
+        assert.strictEqual(events.filter(e => e.type === 'clear').length, 1);
         assert.strictEqual(game.canContinue(), false);
-        assert.strictEqual(game.continueGame(), false);
     }
 });
 
@@ -323,9 +387,11 @@ test('기믹이 있어도 공의 움직임은 번호와 무관하다', () => {
         for (const game of [original, relabeled]) {
             autoPlay(game);
             game.continueGame();
-            autoPlay(game);
+            autoPlay(game, 20, 3000);
         }
         assert.deepStrictEqual(relabeled.numbers(), original.numbers().map(n => 46 - n));
+        assert.strictEqual(relabeled.brokenCount, original.brokenCount);
+        assert.deepStrictEqual(relabeled.balls[0].x, original.balls[0].x);
     }
 });
 

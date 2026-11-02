@@ -56,19 +56,21 @@
     }
 
     function pressAction() {
-        if (sim.state === 'done') {
+        if (isOver()) {
             if (!continuePlay()) reset();
             return true;
         }
         return launch();
     }
 
-    function doneButtons() {
+    const isOver = () => sim.state === 'done' || sim.state === 'cleared';
+
+    function endButtons() {
         return sim.canContinue() ? [CONTINUE_BUTTON, RESTART_BUTTON] : [RESTART_ONLY_BUTTON];
     }
 
-    // 번호가 드러나면 이어서 노려 뽑을 수 있으므로 더 이어갈 수 없을 때만 공개한다
-    const isRevealed = () => sim.state === 'done' && !sim.canContinue();
+    // 번호가 정해진 뒤에는 내용물을 보여 줘도 결과에 영향이 없다
+    const isRevealed = () => sim.lastSet !== null;
 
     function brickColor(brick) {
         if (brick.hits > 1) return HARD_COLOR;
@@ -129,6 +131,9 @@
             case 'complete':
                 announceNumbers();
                 break;
+            case 'clear':
+                playExplodeSound();
+                break;
         }
     }
 
@@ -162,7 +167,7 @@
         if (brick.broken) return;
         const revealed = isRevealed();
 
-        ctx.globalAlpha = sim.state === 'done' ? 0.45 : 1;
+        ctx.globalAlpha = isOver() ? 0.45 : 1;
         ctx.fillStyle = brickColor(brick);
         ctx.beginPath();
         ctx.roundRect(brick.x, brick.y, brick.width, brick.height, 4);
@@ -183,11 +188,11 @@
         ctx.textBaseline = 'middle';
         ctx.fillStyle = 'rgba(20, 20, 40, 0.85)';
         let label = '?';
-        if (revealed) {
+        if (brick.item) {
+            label = ITEM_INFO[brick.item].label;
+        } else if (revealed) {
             if (brick.type === 'number') label = brick.number;
             else label = brick.type === 'dud' ? '꽝' : '+2';
-        } else if (brick.item) {
-            label = ITEM_INFO[brick.item].label;
         }
         ctx.fillText(label, brick.x + brick.width / 2, brick.y + brick.height / 2 + 1);
         ctx.globalAlpha = 1;
@@ -308,25 +313,23 @@
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        if (sim.state === 'done') {
+        if (isOver()) {
+            const cleared = sim.state === 'cleared';
             ctx.fillStyle = 'rgba(10, 10, 20, 0.85)';
             ctx.beginPath();
             ctx.roundRect(24, 340, VIEW_W - 48, 124, 12);
             ctx.fill();
             ctx.fillStyle = 'white';
             ctx.font = uiFont(13, 17);
-            const title = sim.setCount > 1
-                ? `${sim.setCount}번째 번호 완성! 아래에 저장됐어요`
-                : '번호 완성! 아래에 저장됐어요';
-            ctx.fillText(title, VIEW_W / 2, 360);
+            ctx.fillText(cleared ? '클리어! 벽돌을 모두 깼어요' : '번호 완성! 아래에 저장됐어요', VIEW_W / 2, 360);
             ctx.font = uiFont(11, 14);
             ctx.fillStyle = '#c0c4d6';
             ctx.fillText(
-                sim.canContinue() ? '이어하면 기믹이 생기고, 6개를 더 깨면 새 번호가 저장돼요' : '남은 번호가 6개보다 적어 끝났어요',
+                cleared ? '뽑은 번호는 처음 6개 그대로예요' : '이어하기는 번호 없이 남은 벽돌을 다 깨는 도전이에요',
                 VIEW_W / 2,
                 383
             );
-            doneButtons().forEach(button => {
+            endButtons().forEach(button => {
                 ctx.fillStyle = button.color;
                 ctx.beginPath();
                 ctx.roundRect(button.x, button.y, button.w, button.h, 25);
@@ -338,7 +341,7 @@
         } else if (sim.state === 'ready') {
             const lines = {
                 start: ['벽돌 속 번호 중 먼저 깬 6개가 뽑혀요', '드래그로 받침을 움직이고, 손을 떼면 발사'],
-                continue: ['벽돌이 바뀌었어요! 회색은 여러 번 맞혀야 깨져요', '글자 벽돌을 깨면 아이템이 떨어져요'],
+                continue: ['벽돌을 모두 깨면 클리어! 회색은 여러 번 맞혀야 해요', '아이템 벽돌을 깨면 아이템이 떨어져요'],
                 miss: ['놓쳤어요! 뽑은 번호는 그대로예요', '손을 떼면 다시 발사해요']
             }[hint];
             ctx.font = uiFont(13, 17);
@@ -360,7 +363,7 @@
         const brickFont = uiFont(11, 15);
         sim.bricks.forEach(brick => drawBrick(brick, brickFont));
         drawEffects(uiFont(14, 20));
-        if (sim.state !== 'done') {
+        if (!isOver()) {
             drawCapsules();
             drawPaddle();
             drawBalls();
@@ -385,8 +388,8 @@
         },
         pointerDown(coords) {
             const point = toView(coords);
-            if (sim.state === 'done') {
-                const pressed = doneButtons().find(button =>
+            if (isOver()) {
+                const pressed = endButtons().find(button =>
                     point.x >= button.x && point.x <= button.x + button.w
                     && point.y >= button.y && point.y <= button.y + button.h);
                 if (pressed === CONTINUE_BUTTON) continuePlay();
@@ -409,7 +412,7 @@
             return (key === ' ' || key === 'Enter') && pressAction();
         },
         getNumbers() {
-            // 이어하는 동안에도 가장 최근 세트를 표시·공유한다
+            // 이어하는 동안에도 처음 뽑은 번호를 표시·공유한다
             return sim.lastSet;
         }
     };

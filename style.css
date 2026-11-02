@@ -656,6 +656,93 @@ body {
 }
 
 /* ===========================
+   읽을거리
+=========================== */
+.story-list {
+    display: grid;
+    gap: 10px;
+    margin: 16px 0 8px;
+}
+
+.story-card {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 14px 16px;
+    background: #262633;
+    border-radius: 12px;
+    color: #fff;
+    text-decoration: none;
+    text-align: left;
+}
+
+.story-card:hover { background: #30303f; }
+
+.story-card strong {
+    font-size: 15px;
+    line-height: 1.45;
+}
+
+.story-tag {
+    align-self: flex-start;
+    font-size: 11px;
+    font-weight: 700;
+    color: #8fb4ff;
+}
+
+.story-desc {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #aaa;
+}
+
+.story-more {
+    text-align: center;
+    text-decoration: none;
+    box-sizing: border-box;
+}
+
+.story-sources {
+    margin-top: 32px;
+    padding-top: 8px;
+    border-top: 1px solid #2a2a2a;
+}
+
+.story-sources h2 {
+    font-size: 14px;
+    margin-top: 12px;
+    color: #aaa;
+}
+
+.article-page .story-sources li,
+.article-page .story-sources p {
+    font-size: 12px;
+    color: #888;
+}
+
+.story-sources a {
+    color: #8fb4ff;
+    word-break: break-all;
+}
+
+.story-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 24px 0 8px;
+}
+
+.story-nav a {
+    flex: 1;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #8fb4ff;
+    text-decoration: none;
+}
+
+.story-nav a:last-child { text-align: right; }
+
+/* ===========================
    PC (769px 이상)
 =========================== */
 @media (min-width: 769px) {
