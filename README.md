@@ -30,7 +30,7 @@ lotto-game/
 │   └── stats.json        번호별 본번호 출현 횟수
 ├── scripts/
 │   └── fetch_lotto.py    당첨번호 수집기
-├── tests/                node --test tests/draw-time.test.js tests/pinball.test.js tests/bricks.test.js
+├── tests/                node --test tests/draw-time.test.js tests/pinball.test.js tests/bricks.test.js tests/index-assets.test.js
 │                         python -m unittest discover tests
 ├── guide.html            로또 구매 가이드 (정보 콘텐츠)
 ├── odds.html             로또 확률의 이해
@@ -151,6 +151,10 @@ python -m http.server 8899
 
 `main` 푸시 = 배포. 봇이 매주 `latest.json`을 자동 커밋하므로
 푸시 전 `git pull --rebase` 습관화 (non-fast-forward 거절 자주 발생).
+
+**JS·CSS를 바꾸면 `index.html`의 `?v=` 값을 모두 새 값으로 올릴 것.** GitHub Pages는 파일을 10분 캐시하므로,
+버전을 안 올리면 옛 파일과 새 파일이 섞일 수 있다. 실제로 공용 함수를 `game.js`로 옮긴 배포에서
+옛 `game.js` + 새 `bricks.js` 조합이 되어 첫 번호 벽돌에서 게임이 멈췄다.
 
 ## 애드센스 (진행 중)
 
