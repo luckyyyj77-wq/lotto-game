@@ -151,6 +151,184 @@ test('공의 움직임은 벽돌에 적힌 번호와 무관하다', () => {
     }
 });
 
+test('이어하기는 남은 번호와 꽝을 그대로 두고 기믹만 입힌다', () => {
+    const game = createGame({ rng: seeded(21) });
+    autoPlay(game);
+    const contents = brick => `${brick.type}:${brick.number}`;
+    const before = game.bricks.map(contents);
+    const firstSet = game.lastSet.slice();
+    const brokenBefore = game.brokenCount;
+    assert.ok(game.canContinue());
+    assert.ok(game.continueGame());
+
+    assert.deepStrictEqual(game.bricks.map(contents), before);
+    assert.strictEqual(game.state, 'ready');
+    assert.strictEqual(game.picked.length, 0);
+    assert.strictEqual(game.brokenCount, brokenBefore);
+    assert.deepStrictEqual(game.lastSet, firstSet, '이전 세트는 다음 세트 완성 전까지 유지');
+
+    const alive = game.bricks.filter(b => !b.broken);
+    const hard = alive.filter(b => b.hits > 1);
+    const items = alive.filter(b => b.item);
+    assert.ok(hard.length >= alive.length * 0.2, `단단한 벽돌 ${hard.length}개`);
+    assert.ok(items.length >= alive.length * 0.1, `아이템 벽돌 ${items.length}개`);
+    assert.ok(hard.every(b => !b.item), '한 벽돌에 기믹 하나');
+    assert.strictEqual(new Set(items.map(b => b.item)).size, 4);
+});
+
+test('기믹은 번호와 꽝에 치우치지 않고 배정된다', () => {
+    let hardNumber = 0;
+    let hardAll = 0;
+    let numberAll = 0;
+    let total = 0;
+    for (let seed = 500; seed < 700; seed++) {
+        const game = createGame({ rng: seeded(seed) });
+        game.bricks.forEach((brick, i) => {
+            if (i < 15) brick.broken = true; // 판 초반을 건너뛴다
+        });
+        game.state = 'done';
+        game.continueGame();
+        game.bricks.filter(b => !b.broken).forEach(b => {
+            total++;
+            if (b.type === 'number') numberAll++;
+            if (b.hits > 1) {
+                hardAll++;
+                if (b.type === 'number') hardNumber++;
+            }
+        });
+    }
+    const shareInHard = hardNumber / hardAll;
+    const shareOverall = numberAll / total;
+    assert.ok(Math.abs(shareInHard - shareOverall) < 0.03, `${shareInHard} vs ${shareOverall}`);
+});
+
+test('단단한 벽돌은 정해진 횟수를 맞아야 깨지고, 번호는 깨질 때만 뽑힌다', () => {
+    const game = createGame({ rng: seeded(31) });
+    game.state = 'playing';
+    const brick = game.bricks.find(b => b.type === 'number' && b.row === ROWS - 1);
+    brick.hits = 2;
+    const ball = game.balls[0];
+    const fire = () => {
+        ball.x = brick.x + brick.width / 2;
+        ball.y = brick.y + brick.height + 9;
+        ball.vx = 0.5;
+        ball.vy = -5;
+        return game.step();
+    };
+    const first = fire();
+    assert.ok(first.some(e => e.type === 'hardHit'));
+    assert.strictEqual(brick.broken, false);
+    assert.strictEqual(game.picked.length, 0);
+    const second = fire();
+    assert.strictEqual(brick.broken, true);
+    assert.ok(second.some(e => e.type === 'pick'));
+    assert.strictEqual(game.picked.length, 1);
+});
+
+test('아이템: 받은 동안만 효과가 있고 시간이 지나면 끝난다', () => {
+    const catchItem = item => {
+        const game = createGame({ rng: seeded(41) });
+        game.launch();
+        game.balls[0].y = 400;
+        game.capsules.push({ item, x: game.paddle.x, y: game.paddle.y - 5, width: 40, height: 16 });
+        const hold = () => {
+            game.setPaddleTarget(game.balls[0].x);
+            return game.step();
+        };
+        const events = hold();
+        assert.ok(events.some(e => e.type === 'item' && e.item === item));
+        return { game, hold };
+    };
+
+    const wide = catchItem('wide');
+    wide.hold();
+    assert.strictEqual(wide.game.paddle.width, 132);
+    for (let i = 0; i < 620 && wide.game.state === 'playing'; i++) wide.hold();
+    if (wide.game.state === 'playing') assert.strictEqual(wide.game.paddle.width, 84);
+
+    const slow = catchItem('slow');
+    assert.ok(slow.game.effects.slow > 0);
+    const slowSpeed = slow.game.speed();
+    slow.game.effects.slow = 0;
+    assert.ok(slowSpeed < slow.game.speed());
+
+    const split = catchItem('split');
+    assert.strictEqual(split.game.balls.length, 2);
+
+    const laser = catchItem('laser');
+    let shots = 0;
+    for (let i = 0; i < 60; i++) {
+        laser.hold();
+        shots = Math.max(shots, laser.game.shots.length);
+    }
+    assert.ok(shots > 0);
+});
+
+test('광선은 벽돌을 깨고 놓친 아이템은 사라진다', () => {
+    const game = createGame({ rng: seeded(51) });
+    game.launch();
+    const ball = game.balls[0];
+    ball.x = 390;
+    ball.y = 400;
+    game.setPaddleTarget(200);
+    for (let i = 0; i < 30; i++) game.step();
+    const brokenBefore = game.brokenCount;
+    game.effects.laser = 200;
+    for (let i = 0; i < 120; i++) {
+        game.balls.forEach(b => {
+            b.y = 400;
+        });
+        game.step();
+    }
+    assert.ok(game.brokenCount > brokenBefore);
+
+    game.capsules = [{ item: 'wide', x: 10, y: game.H - 2, width: 40, height: 16 }];
+    game.setPaddleTarget(390);
+    for (let i = 0; i < 40; i++) {
+        game.balls.forEach(b => {
+            b.y = 400;
+        });
+        game.step();
+    }
+    assert.strictEqual(game.capsules.filter(c => c.item === 'wide' && c.y >= game.H).length, 0);
+    assert.strictEqual(game.effects.wide, 0);
+});
+
+test('이어하기를 끝까지 하면 겹치지 않는 세트 7개가 나오고 더 이어갈 수 없다', () => {
+    for (let seed = 800; seed < 815; seed++) {
+        const game = createGame({ rng: seeded(seed) });
+        const sets = [];
+        for (let round = 0; round < 7; round++) {
+            autoPlay(game, 0, 72000);
+            assert.strictEqual(game.state, 'done', `seed ${seed} 세트 ${round + 1}`);
+            sets.push(game.lastSet.slice());
+            if (round < 6) assert.ok(game.continueGame(), `seed ${seed} 세트 ${round + 1}`);
+        }
+        const all = sets.flat();
+        assert.strictEqual(all.length, 42);
+        assert.strictEqual(new Set(all).size, 42, '세트끼리 번호가 겹침');
+        assert.strictEqual(game.setCount, 7);
+        assert.strictEqual(game.canContinue(), false);
+        assert.strictEqual(game.continueGame(), false);
+    }
+});
+
+test('기믹이 있어도 공의 움직임은 번호와 무관하다', () => {
+    for (let seed = 900; seed < 905; seed++) {
+        const original = createGame({ rng: seeded(seed) });
+        const relabeled = createGame({ rng: seeded(seed) });
+        relabeled.bricks.forEach(b => {
+            if (b.number !== null) b.number = 46 - b.number;
+        });
+        for (const game of [original, relabeled]) {
+            autoPlay(game);
+            game.continueGame();
+            autoPlay(game);
+        }
+        assert.deepStrictEqual(relabeled.numbers(), original.numbers().map(n => 46 - n));
+    }
+});
+
 test('6개가 뽑히면 더 진행되지 않는다', () => {
     const game = createGame({ rng: seeded(7) });
     autoPlay(game);

@@ -37,6 +37,20 @@
     const EXTRA_BALLS = 2;
     const MAX_BALLS = 6;
 
+    // 이어하기 기믹. 내용물(번호·꽝)과 무관하게 무작위로 고르므로 외형으로 번호를 짐작할 수 없다
+    const HARD_SHARE = 0.25;     // 남은 벽돌 중 단단한 벽돌 비율
+    const ITEM_SHARE = 0.15;     // 남은 벽돌 중 아이템을 품는 비율
+    const ITEMS = ['split', 'wide', 'slow', 'laser'];
+    const ITEM_FALL_SPEED = 2.5;
+    const ITEM_SIZE = { width: 40, height: 16 };
+    const WIDE_STEPS = 600;      // 받침 확대 10초
+    const WIDE_WIDTH = 132;
+    const SLOW_STEPS = 480;      // 공 감속 8초
+    const SLOW_FACTOR = 0.7;
+    const LASER_STEPS = 420;     // 광선 7초
+    const LASER_INTERVAL = 24;
+    const SHOT_SPEED = 10;       // 벽돌 높이보다 작아 광선이 벽돌을 뚫지 않는다
+
     function shuffle(list, rng) {
         for (let i = list.length - 1; i > 0; i--) {
             const j = Math.floor(rng() * (i + 1));
@@ -77,7 +91,9 @@
                     y: BRICK_TOP + row * (BRICK_H + BRICK_GAP),
                     width: BRICK_W,
                     height: BRICK_H,
-                    broken: false
+                    broken: false,
+                    hits: 1,
+                    item: null
                 });
             }
         }
@@ -100,12 +116,37 @@
             balls: [],
             bricks: buildBricks(rng),
             picked: [],
+            lastSet: null,       // 가장 최근에 완성한 번호 6개
+            setCount: 0,
             brokenCount: 0,
-            stepCount: 0
+            stepCount: 0,
+            capsules: [],
+            shots: [],
+            effects: { wide: 0, slow: 0, laser: 0 }
         };
 
         game.numbers = () => game.picked.map(p => p.number);
-        game.speed = () => Math.min(MAX_SPEED, START_SPEED + game.brokenCount * SPEED_PER_BRICK);
+        game.speed = () => {
+            const base = Math.min(MAX_SPEED, START_SPEED + game.brokenCount * SPEED_PER_BRICK);
+            return game.effects.slow > 0 ? base * SLOW_FACTOR : base;
+        };
+
+        const remainingNumbers = () =>
+            game.bricks.filter(b => b.type === 'number' && !b.broken).length;
+
+        game.canContinue = () => game.state === 'done' && remainingNumbers() >= PICK_COUNT;
+
+        // 같은 판을 이어 간다. 남은 벽돌의 내용물은 그대로 두고 기믹만 입힌다
+        game.continueGame = () => {
+            if (!game.canContinue()) return false;
+            game.picked = [];
+            game.capsules = [];
+            game.shots = [];
+            game.effects = { wide: 0, slow: 0, laser: 0 };
+            assignGimmicks(game, rng);
+            placeBallOnPaddle(game);
+            return true;
+        };
 
         // 패들 중심의 목표 위치 (드래그). null이면 해제
         game.setPaddleTarget = x => {
@@ -132,6 +173,20 @@
         return game;
     }
 
+    function assignGimmicks(game, rng) {
+        const plain = game.bricks.filter(b => !b.broken && b.hits === 1 && !b.item);
+        shuffle(plain, rng);
+        const remaining = game.bricks.filter(b => !b.broken).length;
+        const hardCount = Math.round(remaining * HARD_SHARE);
+        const itemCount = Math.round(remaining * ITEM_SHARE);
+        plain.slice(0, hardCount).forEach(brick => {
+            brick.hits = rng() < 0.7 ? 2 : 3;
+        });
+        plain.slice(hardCount, hardCount + itemCount).forEach((brick, i) => {
+            brick.item = ITEMS[i % ITEMS.length];
+        });
+    }
+
     function placeBallOnPaddle(game) {
         game.balls = [newBall(game.paddle.x, PADDLE.y - ballRadius - 1)];
         game.state = 'ready';
@@ -156,6 +211,7 @@
 
     function updatePaddle(game) {
         const paddle = game.paddle;
+        paddle.width = game.effects.wide > 0 ? WIDE_WIDTH : PADDLE.width;
         if (game.paddleTarget !== null) {
             const delta = game.paddleTarget - paddle.x;
             paddle.x += Math.max(-PADDLE.speed * 2, Math.min(PADDLE.speed * 2, delta));
@@ -234,7 +290,14 @@
             ball.vx -= 2 * normal * nx;
             ball.vy -= 2 * normal * ny;
         }
-        breakBrick(game, brick, ball, events);
+        damageBrick(game, brick, ball, events);
+    }
+
+    // 단단한 벽돌은 여러 번 맞아야 깨진다. source는 공이나 광선
+    function damageBrick(game, brick, source, events) {
+        brick.hits--;
+        if (brick.hits > 0) events.push({ type: 'hardHit', brick });
+        else breakBrick(game, brick, source, events);
     }
 
     function breakBrick(game, brick, ball, events) {
@@ -242,6 +305,15 @@
         brick.brokenStep = game.stepCount;
         game.brokenCount++;
         events.push({ type: 'brick', brick });
+
+        if (brick.item) {
+            game.capsules.push({
+                item: brick.item,
+                x: brick.x + brick.width / 2,
+                y: brick.y + brick.height / 2,
+                ...ITEM_SIZE
+            });
+        }
 
         if (brick.type === 'multi') {
             const speed = game.speed();
@@ -265,12 +337,73 @@
             events.push({ type: 'pick', number: brick.number, brick });
             if (game.picked.length === PICK_COUNT) {
                 game.state = 'done';
+                game.setCount++;
+                game.lastSet = game.numbers().sort((a, b) => a - b);
                 events.push({ type: 'complete', numbers: game.numbers() });
             }
         }
     }
 
-    function stepGame(game) {
+    function applyItem(game, item, rng) {
+        if (item === 'wide') game.effects.wide = WIDE_STEPS;
+        else if (item === 'slow') game.effects.slow = SLOW_STEPS;
+        else if (item === 'laser') game.effects.laser = LASER_STEPS;
+        else {
+            // 공 분열: 공마다 하나씩 늘린다
+            const speed = game.speed();
+            for (const ball of game.balls.slice()) {
+                if (game.balls.length >= MAX_BALLS) break;
+                const extra = newBall(ball.x, ball.y);
+                const angle = (rng() - 0.5) * (Math.PI / 2);
+                extra.vx = Math.sin(angle) * speed;
+                extra.vy = -Math.cos(angle) * speed;
+                game.balls.push(extra);
+            }
+        }
+    }
+
+    function updateCapsules(game, rng, events) {
+        const paddle = game.paddle;
+        game.capsules = game.capsules.filter(capsule => {
+            capsule.y += ITEM_FALL_SPEED;
+            const caught = capsule.y + capsule.height / 2 >= paddle.y
+                && capsule.y - capsule.height / 2 <= paddle.y + paddle.height
+                && Math.abs(capsule.x - paddle.x) <= paddle.width / 2 + capsule.width / 2;
+            if (caught) {
+                applyItem(game, capsule.item, rng);
+                events.push({ type: 'item', item: capsule.item });
+                return false;
+            }
+            return capsule.y < H + capsule.height;
+        });
+    }
+
+    function updateLaser(game, events) {
+        const { paddle, effects } = game;
+        if (effects.laser > 0 && effects.laser % LASER_INTERVAL === 0) {
+            const half = paddle.width / 2 - 6;
+            game.shots.push({ x: paddle.x - half, y: paddle.y }, { x: paddle.x + half, y: paddle.y });
+            events.push({ type: 'shot' });
+        }
+        game.shots = game.shots.filter(shot => {
+            shot.y -= SHOT_SPEED;
+            if (shot.y < CEILING) return false;
+            const brick = game.bricks.find(b => !b.broken
+                && shot.x >= b.x && shot.x <= b.x + b.width
+                && shot.y >= b.y && shot.y <= b.y + b.height);
+            if (!brick || game.state === 'done') return true;
+            damageBrick(game, brick, shot, events);
+            return false;
+        });
+    }
+
+    function updateEffects(game) {
+        for (const key of Object.keys(game.effects)) {
+            if (game.effects[key] > 0) game.effects[key]--;
+        }
+    }
+
+    function stepGame(game, rng) {
         const events = [];
         game.stepCount++;
         updatePaddle(game);
@@ -281,6 +414,11 @@
             ball.y = PADDLE.y - ballRadius - 1;
             return events;
         }
+        if (game.state === 'done') return events;
+
+        updateEffects(game);
+        updateCapsules(game, rng, events);
+        updateLaser(game, events);
         if (game.state === 'done') return events;
 
         const speed = game.speed();
@@ -307,6 +445,8 @@
         game.balls = game.balls.filter(ball => ball.y - ball.radius <= H);
         if (game.balls.length === 0) {
             events.push({ type: 'miss' });
+            game.capsules = [];
+            game.shots = [];
             placeBallOnPaddle(game);
         }
         return events;

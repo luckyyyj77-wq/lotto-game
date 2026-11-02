@@ -9,38 +9,71 @@
     const rowColor = row => ROW_COLORS[Math.floor(row / 2) % ROW_COLORS.length];
     const HUD_Y = 26;
     const HUD_SPACING = 46;
-    const BUTTON = { x: 105, y: 400, w: 190, h: 50 };
+    const CONTINUE_BUTTON = { x: 40, y: 400, w: 155, h: 50, label: '이어하기', color: '#f08c00' };
+    const RESTART_BUTTON = { x: 205, y: 400, w: 155, h: 50, label: '다시 뽑기', color: '#2a7aff' };
+    const RESTART_ONLY_BUTTON = { x: 105, y: 400, w: 190, h: 50, label: '다시 뽑기', color: '#2a7aff' };
+    const HARD_COLOR = '#6c7693';
+    const ITEM_INFO = {
+        split: { label: '분열', color: '#ff6bd6', notice: '공 분열!' },
+        wide: { label: '확대', color: '#3ecf8e', notice: '받침 확대 10초!' },
+        slow: { label: '감속', color: '#4dabf7', notice: '공 감속 8초!' },
+        laser: { label: '광선', color: '#ff6b6b', notice: '광선 7초!' }
+    };
     const PICK_ANIM_STEPS = 24;
     const POPUP_STEPS = 45;
     const DEBRIS_PER_BRICK = 8;
 
     let sim = createGame();
     let dragging = false;
-    let hasLaunched = false;
+    let hint = 'start'; // 발사 전 안내: start, continue, miss
     const debris = [];
     const popups = [];
 
-    function reset() {
-        sim = createGame();
-        hasLaunched = false;
+    function clearEffects() {
         debris.length = 0;
         popups.length = 0;
+    }
+
+    function reset() {
+        sim = createGame();
+        hint = 'start';
+        clearEffects();
         syncResultUI();
+    }
+
+    function continuePlay() {
+        if (!sim.continueGame()) return false;
+        hint = 'continue';
+        clearEffects();
+        playGrabSound();
+        return true;
     }
 
     function launch() {
         if (!sim.launch()) return false;
-        hasLaunched = true;
         playGrabSound();
         return true;
     }
 
     function pressAction() {
         if (sim.state === 'done') {
-            reset();
+            if (!continuePlay()) reset();
             return true;
         }
         return launch();
+    }
+
+    function doneButtons() {
+        return sim.canContinue() ? [CONTINUE_BUTTON, RESTART_BUTTON] : [RESTART_ONLY_BUTTON];
+    }
+
+    // 번호가 드러나면 이어서 노려 뽑을 수 있으므로 더 이어갈 수 없을 때만 공개한다
+    const isRevealed = () => sim.state === 'done' && !sim.canContinue();
+
+    function brickColor(brick) {
+        if (brick.hits > 1) return HARD_COLOR;
+        if (brick.item) return ITEM_INFO[brick.item].color;
+        return rowColor(brick.row);
     }
 
     function burstBrick(brick) {
@@ -51,7 +84,7 @@
                 vx: (Math.random() - 0.5) * 4,
                 vy: -Math.random() * 3,
                 size: 2 + Math.random() * 3,
-                color: rowColor(brick.row),
+                color: brickColor(brick),
                 life: 40
             });
         }
@@ -61,7 +94,19 @@
         switch (event.type) {
             case 'wall':
             case 'paddle':
+            case 'hardHit':
+            case 'shot':
                 playTickSound();
+                break;
+            case 'item':
+                playSlotSound();
+                popups.push({
+                    text: ITEM_INFO[event.item].notice,
+                    x: VIEW_W / 2,
+                    y: sim.paddle.y - 30,
+                    age: 0,
+                    color: ITEM_INFO[event.item].color
+                });
                 break;
             case 'brick':
                 burstBrick(event.brick);
@@ -78,6 +123,7 @@
                 popups.push({ text: '공 +2', brick: event.brick, age: 0, color: '#ffe08a' });
                 break;
             case 'miss':
+                hint = 'miss';
                 playExplodeSound();
                 break;
             case 'complete':
@@ -113,29 +159,75 @@
         `bold ${Math.round(Math.min(maxPx, displayPx / (displayScale * RES)))}px Arial`;
 
     function drawBrick(brick, font) {
-        const done = sim.state === 'done';
         if (brick.broken) return;
+        const revealed = isRevealed();
 
-        ctx.globalAlpha = done ? 0.45 : 1;
-        ctx.fillStyle = rowColor(brick.row);
+        ctx.globalAlpha = sim.state === 'done' ? 0.45 : 1;
+        ctx.fillStyle = brickColor(brick);
         ctx.beginPath();
         ctx.roundRect(brick.x, brick.y, brick.width, brick.height, 4);
         ctx.fill();
         ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
         ctx.fillRect(brick.x + 4, brick.y + 2, brick.width - 8, 2);
 
-        // 깨기 전에는 번호를 보여 주지 않는다. 끝난 뒤에는 어디에 무엇이 있었는지 공개한다
+        // 단단한 벽돌은 테두리로 표시하고, 남은 횟수만큼 두껍게 그린다
+        if (brick.hits > 1) {
+            ctx.strokeStyle = '#d8dcf0';
+            ctx.lineWidth = brick.hits;
+            ctx.strokeRect(brick.x + 1, brick.y + 1, brick.width - 2, brick.height - 2);
+        }
+
+        // 깨기 전에는 번호를 보여 주지 않는다
         ctx.font = font;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'rgba(20, 20, 40, 0.8)';
+        ctx.fillStyle = 'rgba(20, 20, 40, 0.85)';
         let label = '?';
-        if (done) {
+        if (revealed) {
             if (brick.type === 'number') label = brick.number;
             else label = brick.type === 'dud' ? '꽝' : '+2';
+        } else if (brick.item) {
+            label = ITEM_INFO[brick.item].label;
         }
         ctx.fillText(label, brick.x + brick.width / 2, brick.y + brick.height / 2 + 1);
         ctx.globalAlpha = 1;
+    }
+
+    function drawCapsules() {
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = uiFont(11, 13);
+        sim.capsules.forEach(capsule => {
+            const info = ITEM_INFO[capsule.item];
+            ctx.fillStyle = info.color;
+            ctx.beginPath();
+            ctx.roundRect(capsule.x - capsule.width / 2, capsule.y - capsule.height / 2, capsule.width, capsule.height, 8);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(20, 20, 40, 0.9)';
+            ctx.fillText(info.label, capsule.x, capsule.y + 1);
+        });
+
+        ctx.fillStyle = '#ff8787';
+        sim.shots.forEach(shot => ctx.fillRect(shot.x - 1.5, shot.y - 8, 3, 12));
+    }
+
+    // 남은 아이템 시간
+    function drawEffectTimers() {
+        const active = [
+            ['wide', sim.effects.wide],
+            ['slow', sim.effects.slow],
+            ['laser', sim.effects.laser]
+        ].filter(([, steps]) => steps > 0);
+        if (active.length === 0) return;
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = uiFont(11, 14);
+        ctx.fillStyle = '#d8dcf0';
+        const text = active
+            .map(([key, steps]) => `${ITEM_INFO[key].label} ${Math.ceil(steps / 60)}초`)
+            .join(' · ');
+        ctx.fillText(text, VIEW_W / 2, 586);
     }
 
     function drawPaddle() {
@@ -176,9 +268,11 @@
         ctx.textBaseline = 'middle';
         popups.forEach(popup => {
             const { brick, age, text, color } = popup;
+            const x = brick ? brick.x + brick.width / 2 : popup.x;
+            const y = brick ? brick.y + brick.height / 2 : popup.y;
             ctx.globalAlpha = 1 - age / POPUP_STEPS;
             ctx.fillStyle = color;
-            ctx.fillText(text, brick.x + brick.width / 2, brick.y + brick.height / 2 - age * 0.4);
+            ctx.fillText(text, x, y - age * 0.4);
         });
         ctx.globalAlpha = 1;
     }
@@ -215,24 +309,38 @@
         ctx.textBaseline = 'middle';
 
         if (sim.state === 'done') {
-            ctx.fillStyle = 'rgba(10, 10, 20, 0.82)';
+            ctx.fillStyle = 'rgba(10, 10, 20, 0.85)';
             ctx.beginPath();
-            ctx.roundRect(30, 350, VIEW_W - 60, 114, 12);
+            ctx.roundRect(24, 340, VIEW_W - 48, 124, 12);
             ctx.fill();
             ctx.fillStyle = 'white';
             ctx.font = uiFont(13, 17);
-            ctx.fillText('번호 완성! 아래에 저장됐어요', VIEW_W / 2, 374);
-            ctx.fillStyle = '#2a7aff';
-            ctx.beginPath();
-            ctx.roundRect(BUTTON.x, BUTTON.y, BUTTON.w, BUTTON.h, 25);
-            ctx.fill();
-            ctx.fillStyle = 'white';
-            ctx.font = uiFont(15, 22);
-            ctx.fillText('다시 뽑기', VIEW_W / 2, BUTTON.y + BUTTON.h / 2 + 1);
+            const title = sim.setCount > 1
+                ? `${sim.setCount}번째 번호 완성! 아래에 저장됐어요`
+                : '번호 완성! 아래에 저장됐어요';
+            ctx.fillText(title, VIEW_W / 2, 360);
+            ctx.font = uiFont(11, 14);
+            ctx.fillStyle = '#c0c4d6';
+            ctx.fillText(
+                sim.canContinue() ? '이어하면 기믹이 생기고, 6개를 더 깨면 새 번호가 저장돼요' : '남은 번호가 6개보다 적어 끝났어요',
+                VIEW_W / 2,
+                383
+            );
+            doneButtons().forEach(button => {
+                ctx.fillStyle = button.color;
+                ctx.beginPath();
+                ctx.roundRect(button.x, button.y, button.w, button.h, 25);
+                ctx.fill();
+                ctx.fillStyle = 'white';
+                ctx.font = uiFont(15, 20);
+                ctx.fillText(button.label, button.x + button.w / 2, button.y + button.h / 2 + 1);
+            });
         } else if (sim.state === 'ready') {
-            const lines = hasLaunched
-                ? ['놓쳤어요! 뽑은 번호는 그대로예요', '손을 떼면 다시 발사해요']
-                : ['벽돌 속 번호 중 먼저 깬 6개가 뽑혀요', '드래그로 받침을 움직이고, 손을 떼면 발사'];
+            const lines = {
+                start: ['벽돌 속 번호 중 먼저 깬 6개가 뽑혀요', '드래그로 받침을 움직이고, 손을 떼면 발사'],
+                continue: ['벽돌이 바뀌었어요! 회색은 여러 번 맞혀야 깨져요', '글자 벽돌을 깨면 아이템이 떨어져요'],
+                miss: ['놓쳤어요! 뽑은 번호는 그대로예요', '손을 떼면 다시 발사해요']
+            }[hint];
             ctx.font = uiFont(13, 17);
             ctx.lineWidth = 3;
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
@@ -253,8 +361,10 @@
         sim.bricks.forEach(brick => drawBrick(brick, brickFont));
         drawEffects(uiFont(14, 20));
         if (sim.state !== 'done') {
+            drawCapsules();
             drawPaddle();
             drawBalls();
+            drawEffectTimers();
         }
         drawPickSlots();
         drawOverlay();
@@ -276,9 +386,11 @@
         pointerDown(coords) {
             const point = toView(coords);
             if (sim.state === 'done') {
-                const onButton = point.x >= BUTTON.x && point.x <= BUTTON.x + BUTTON.w
-                    && point.y >= BUTTON.y && point.y <= BUTTON.y + BUTTON.h;
-                if (onButton) reset();
+                const pressed = doneButtons().find(button =>
+                    point.x >= button.x && point.x <= button.x + button.w
+                    && point.y >= button.y && point.y <= button.y + button.h);
+                if (pressed === CONTINUE_BUTTON) continuePlay();
+                else if (pressed) reset();
                 return;
             }
             dragging = true;
@@ -297,8 +409,8 @@
             return (key === ' ' || key === 'Enter') && pressAction();
         },
         getNumbers() {
-            if (sim.picked.length < PICK_COUNT) return null;
-            return sim.numbers().sort((a, b) => a - b);
+            // 이어하는 동안에도 가장 최근 세트를 표시·공유한다
+            return sim.lastSet;
         }
     };
 
