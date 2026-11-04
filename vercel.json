@@ -1,8 +1,13 @@
 {
   "redirects": [
     {
-      "source": "/:path*",
-      "destination": "https://lucky-collector.com/:path*",
+      "source": "/",
+      "destination": "https://lucky-collector.com/",
+      "permanent": true
+    },
+    {
+      "source": "/(.*)",
+      "destination": "https://lucky-collector.com/$1",
       "permanent": true
     }
   ]
