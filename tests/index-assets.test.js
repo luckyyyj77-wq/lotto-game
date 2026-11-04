@@ -23,7 +23,8 @@ test('index.html의 모든 JS·CSS에 같은 버전이 붙어 있다', () => {
 test('js 폴더의 모든 스크립트를 index.html이 불러오고, 없는 파일을 가리키지 않는다', () => {
     const loaded = assets.map(asset => asset.split('?')[0]);
     loaded.forEach(file => assert.ok(fs.existsSync(path.join(root, file)), `${file} 없음`));
-    fs.readdirSync(path.join(root, 'js')).forEach(file => {
+    // backtest.js는 check.html 전용이다
+    fs.readdirSync(path.join(root, 'js')).filter(file => file !== 'backtest.js').forEach(file => {
         assert.ok(loaded.includes(`js/${file}`), `js/${file}을 불러오지 않음`);
     });
 });

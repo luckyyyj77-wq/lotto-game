@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/:path*",
+      "destination": "https://lucky-collector.com/:path*",
+      "permanent": true
+    }
+  ]
+}

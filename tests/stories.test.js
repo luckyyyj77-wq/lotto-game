@@ -8,7 +8,7 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const storyFiles = fs.readdirSync(root).filter(file => /^story-.*\.html$/.test(file));
-const sitePages = ['index.html', 'guide.html', 'odds.html', 'tax.html', 'faq.html', 'about.html', 'privacy.html', 'stories.html', ...storyFiles];
+const sitePages = ['index.html', 'guide.html', 'odds.html', 'tax.html', 'faq.html', 'about.html', 'privacy.html', 'stories.html', 'check.html', ...storyFiles];
 
 test('글이 10편 있고 목록과 sitemap에 모두 올라가 있다', () => {
     assert.strictEqual(storyFiles.length, 10);

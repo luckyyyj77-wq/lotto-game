@@ -176,7 +176,9 @@ python -m http.server 8899
 - **도메인**: `lucky-collector.com` (가비아 등록, 2027-11-02 만료, GitHub Pages 연결). 애드센스가 경로 없는 도메인만
   사이트로 받아 2026-11 옛 주소에서 옮겼다. `CNAME`과 `ads.txt`는 저장소 최상위에 있으며 지우면 안 된다.
   가비아 DNS 관리툴은 AAAA 타입을 제공하지 않아 A 4개와 `www` CNAME, 인증용 TXT만 있다
-- **읽을거리 글을 고칠 때**: 사실은 출처와 맞춰 확인하고, 자체 통계는 `tests/stories.test.js`가 데이터와 대조한다
+- **읽을거리 글을 고칠 때**: 사실은 출처와 맞춰 확인하고, 자체 통계는 `tests/stories.test.js`, `tests/backtest.test.js`가 데이터와 대조한다
+- **2026-11 "가치가 별로 없는 콘텐츠" 거절**: 등록 주소가 `lotto-game-delta.vercel.app`이었다. `vercel.json`으로 이 주소를 새 도메인으로 영구 이동시키고,
+  `check.html`(내 번호 돌려보기, `js/backtest.js`)과 자체 데이터 분석을 추가했다. 애드센스에는 `lucky-collector.com`을 등록해야 한다
 
 ## 주의사항
 

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>내 번호 돌려보기 — 지난 회차 전부와 비교 | 행운수집기</title>
+    <meta name="description" content="고른 번호 6개를 1회부터 최신 회차까지 전부 비교해, 몇 등이 몇 번 나왔을지 평균 기대치와 함께 보여 줍니다. 회차별 당첨번호도 찾아볼 수 있습니다." />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href="https://lucky-collector.com/check.html" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="행운수집기" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:title" content="내 번호 돌려보기 — 지난 회차 전부와 비교 | 행운수집기" />
+    <meta property="og:description" content="고른 번호 6개를 1회부터 최신 회차까지 전부 비교해, 몇 등이 몇 번 나왔을지 평균 기대치와 함께 보여 줍니다. 회차별 당첨번호도 찾아볼 수 있습니다." />
+    <meta property="og:url" content="https://lucky-collector.com/check.html" />
+    <link rel="stylesheet" href="style.css" />
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6481527875589889"
+            crossorigin="anonymous"></script>
+</head>
+<body>
+
+<main class="article-page">
+    <div class="article-header">
+        <a class="home-link" href="index.html">← 행운수집기 홈</a>
+        <h1>내 번호 돌려보기</h1>
+        <p class="article-date">고른 번호를 지난 회차 전부와 비교합니다</p>
+    </div>
+
+    <p>
+        "이 번호로 처음부터 계속 샀다면 어땠을까?" 궁금할 때 쓰는 도구입니다. 번호 6개를 고르면 1회부터 최신 회차까지 모든 당첨번호와 비교해, 등수별로 몇 번 해당했는지 알려 줍니다. 고른 번호는 이 브라우저 안에서만 계산하며 어디로도 보내지 않습니다.
+    </p>
+
+    <section class="check-tool" aria-label="번호 비교 도구">
+        <h2>번호 고르기</h2>
+        <p id="checkStatus" class="stats-note" aria-live="polite">당첨번호 자료를 불러오는 중입니다.</p>
+        <div id="pickGrid" class="pick-grid"></div>
+        <p id="pickCount" class="pick-count" aria-live="polite">0 / 6개 선택</p>
+        <div class="check-actions">
+            <button type="button" id="randomBtn" class="check-btn">무작위 6개</button>
+            <button type="button" id="savedBtn" class="check-btn" hidden>최근 게임 번호</button>
+            <button type="button" id="clearBtn" class="check-btn">지우기</button>
+            <button type="button" id="runBtn" class="check-btn primary" disabled>돌려보기</button>
+        </div>
+        <div id="checkResult" class="check-result" tabindex="-1"></div>
+    </section>
+
+    <h2>결과는 이렇게 읽으세요</h2>
+
+    <p>
+        표의 "평균 기대치"는 아무 조합이나 하나 골랐을 때 그동안 받았을 평균 횟수입니다. 예를 들어 1회부터 1,248회까지라면 5등은 평균 28.0번, 4등은 1.7번입니다. 내 번호가 이보다 많이 나왔다면 지난 기록과 우연히 잘 맞은 것이고, 적다면 덜 맞은 것입니다. 어느 쪽이든 앞으로의 확률은 바뀌지 않습니다.
+    </p>
+
+    <table>
+        <thead><tr><th>등수</th><th>조건</th><th>해당 조합 수</th><th>확률</th></tr></thead>
+        <tbody>
+            <tr><td>1등</td><td>6개 일치</td><td>1</td><td>8,145,060분의 1</td></tr>
+            <tr><td>2등</td><td>5개 + 보너스</td><td>6</td><td>1,357,510분의 1</td></tr>
+            <tr><td>3등</td><td>5개 일치</td><td>228</td><td>약 35,724분의 1</td></tr>
+            <tr><td>4등</td><td>4개 일치</td><td>11,115</td><td>약 733분의 1</td></tr>
+            <tr><td>5등</td><td>3개 일치</td><td>182,780</td><td>약 45분의 1</td></tr>
+        </tbody>
+    </table>
+
+    <h2>1, 2, 3, 4, 5, 6으로 해 봤습니다</h2>
+
+    <p>
+        누구나 "절대 안 나올 번호"로 꼽는 조합입니다. 1,248회와 비교한 결과는 4등 4번, 5등 24번이었습니다. 평균 기대치인 4등 1.7번, 5등 28.0번과 크게 다르지 않습니다. 번호가 나란히 있어 어색해 보일 뿐, 이 조합도 다른 조합과 같은 확률로 추첨됩니다.
+    </p>
+
+    <div class="note-box">
+        지난 기록과 잘 맞았다고 앞으로도 잘 맞는 것은 아닙니다. 이 도구는 당첨을 예측하지 않으며, 과거를 살펴보는 재미로 만들었습니다. 왜 그런지는 <a href="story-bias.html" style="color:#2a7aff">많이 나온 번호는 다음에도 잘 나올까</a>에서 데이터로 확인할 수 있습니다.
+    </div>
+
+    <h2>회차별 당첨번호 찾기</h2>
+
+    <form id="roundForm" class="round-form">
+        <label for="roundInput">회차</label>
+        <input id="roundInput" type="number" min="1" inputmode="numeric" placeholder="예: 1000" required />
+        <button type="submit" class="check-btn primary">찾기</button>
+    </form>
+    <div id="roundResult" class="check-result" aria-live="polite"></div>
+
+    <section class="story-sources">
+        <h2>계산 기준</h2>
+        <ul>
+            <li>당첨번호는 동행복권 공개 자료를 모은 <a href="https://lucky-collector.com/data/draws.json" rel="noopener" target="_blank">행운수집기 집계 자료(data/draws.json)</a>를 씁니다. 추첨 후 자동으로 갱신합니다.</li>
+        </ul>
+        <p>2·3등 당첨금은 회차마다 다르고 집계 자료에 없어 금액은 계산하지 않고 횟수만 보여 줍니다. 복권 구매는 만 19세 이상만 가능합니다. 도박 문제 상담은 한국도박문제예방치유원(1336)에서 받을 수 있습니다.</p>
+    </section>
+
+    <footer class="site-footer">
+        <nav class="footer-nav">
+            <a href="index.html">홈</a>
+            <a href="stories.html">읽을거리</a>
+            <a href="check.html">내 번호 돌려보기</a>
+            <a href="guide.html">로또 구매 가이드</a>
+            <a href="odds.html">로또 확률의 이해</a>
+            <a href="tax.html">당첨금 수령과 세금</a>
+            <a href="faq.html">자주 묻는 질문</a>
+            <a href="about.html">사이트 소개</a>
+            <a href="privacy.html">개인정보처리방침</a>
+        </nav>
+        <p class="footer-copy">© 2026 행운수집기. All rights reserved.</p>
+    </footer>
+</main>
+
+<script src="js/backtest.js"></script>
+</body>
+</html>
