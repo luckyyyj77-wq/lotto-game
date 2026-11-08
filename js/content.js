@@ -38,14 +38,50 @@ function saveHistory(numbers) {
     } catch { /* 저장소를 쓸 수 없는 브라우저 — 기록 없이 게임만 진행 */ }
     renderHistory();
     updateCompare();
+    loadHistoryDraws();
 }
 
 let historyExpanded = false;
+
+// 회차별 당첨번호 { 회차: { nums, bonus } } — latest.json으로 먼저 채우고, 지난 기록이 있으면 draws.json을 한 번 불러온다
+const drawsByRound = {};
+let allDrawsRequested = false;
+
+const RANK_LABEL = { 1: '1등', 2: '2등', 3: '3등', 4: '4등', 5: '5등', 0: '낙첨' };
+
+function historyResults(history) {
+    const drawn = latestDrawnRound(Date.now());
+    return history.map(item => MyResults.resultFor(item, drawsByRound, drawn));
+}
+
+function renderResultLine(result) {
+    if (result.status === 'pending') return '<span class="result-line pending">추첨 전</span>';
+    if (result.status === 'waiting') return '<span class="result-line pending">결과 확인 전</span>';
+    if (result.status !== 'done') return '';
+    const text = `${result.matched.length}개 일치${result.rank === 2 ? ' + 보너스' : ''} · ${RANK_LABEL[result.rank]}`;
+    return `<span class="result-line${result.rank ? ' win' : ''}">${text}</span>`;
+}
+
+function renderHistorySummary(results) {
+    const el = document.getElementById('historySummary');
+    if (!el) return;
+    const { checked, counts } = MyResults.summarize(results);
+    if (!checked) {
+        el.style.display = 'none';
+        return;
+    }
+    const wins = [1, 2, 3, 4, 5].filter(rank => counts[rank]).map(rank => `${rank}등 ${counts[rank]}번`);
+    el.style.display = 'block';
+    el.innerHTML = `결과가 나온 번호 <strong>${checked}세트</strong> · ${wins.length ? wins.join(' · ') : '아직 당첨 없음'}`
+        + `<span>그 회차에 이 번호로 샀다면의 결과입니다. 5등 이상이 나올 확률은 한 세트에 약 1/42입니다.</span>`;
+}
 
 function renderHistory() {
     const el = document.getElementById('historyList');
     if (!el) return;
     const history = loadHistory();
+    const results = historyResults(history);
+    renderHistorySummary(results);
 
     if (history.length === 0) {
         el.innerHTML = '<p class="empty-msg">아직 뽑은 번호가 없어요.<br>게임을 플레이해보세요!</p>';
@@ -56,14 +92,20 @@ function renderHistory() {
     const showCount = historyExpanded ? history.length : Math.min(5, history.length);
     const toggleBtn = document.getElementById('historyToggle');
 
-    el.innerHTML = history.slice(0, showCount).map(item => `
+    el.innerHTML = history.slice(0, showCount).map((item, i) => {
+        const result = results[i];
+        const hit = result.status === 'done' ? result.matched : null;
+        return `
         <div class="history-item">
-            <span class="history-date">${item.date}${item.round ? ` · 제 ${item.round}회 대상` : ''}</span>
-            <div class="history-balls">
-                ${item.numbers.map(n => renderBall(n)).join('')}
+            <div class="history-head">
+                <span class="history-date">${item.date}${item.round ? ` · 제 ${item.round}회 대상` : ''}</span>
+                ${renderResultLine(result)}
             </div>
-        </div>
-    `).join('');
+            <div class="history-balls">
+                ${item.numbers.map(n => renderBall(n, hit && !hit.includes(n) ? 'ball-miss' : '')).join('')}
+            </div>
+        </div>`;
+    }).join('');
 
     if (history.length > 5) {
         toggleBtn.style.display = 'block';
@@ -71,6 +113,45 @@ function renderHistory() {
     } else {
         toggleBtn.style.display = 'none';
     }
+    updateResultHint(results);
+}
+
+// 지난번 방문 뒤 새로 나온 결과가 있으면 게임 아래 안내 문구로 알린다. 기록 영역을 보면 본 것으로 친다.
+const SEEN_KEY = 'lotto_seen_round';
+let seenObserver = null;
+
+function readSeenRound() {
+    try { return parseInt(localStorage.getItem(SEEN_KEY), 10) || 0; } catch { return 0; }
+}
+
+function updateResultHint(results) {
+    const hint = document.getElementById('scrollHint');
+    const section = document.getElementById('sectionHistory');
+    if (!hint || !section) return;
+    const round = MyResults.unseenRound(results, readSeenRound());
+    if (!round) return;
+    hint.textContent = `↓ 제 ${round}회 내 번호 결과가 나왔어요`;
+    hint.classList.add('has-result');
+    if (seenObserver || typeof IntersectionObserver === 'undefined') return;
+    seenObserver = new IntersectionObserver(entries => {
+        if (!entries.some(e => e.isIntersecting)) return;
+        try { localStorage.setItem(SEEN_KEY, String(round)); } catch { /* 저장소를 쓸 수 없는 브라우저 */ }
+        seenObserver.disconnect();
+    }, { threshold: 0.3 });
+    seenObserver.observe(section);
+}
+
+async function loadHistoryDraws() {
+    const latest = window._latestRound || 0;
+    const needsOld = loadHistory().some(item => Number.isInteger(item.round) && item.round < latest && !drawsByRound[item.round]);
+    if (!needsOld || allDrawsRequested) return;
+    allDrawsRequested = true;
+    try {
+        const res = await fetch('./data/draws.json', { cache: 'no-cache' });
+        if (!res.ok) return;
+        (await res.json()).forEach(d => { drawsByRound[d.round] = { nums: d.nums, bonus: d.bonus }; });
+        renderHistory();
+    } catch { /* 지난 결과는 '결과 확인 전'으로 남는다 */ }
 }
 
 function toggleHistory() {
@@ -188,7 +269,10 @@ async function fetchLatestLotto() {
     window._latestRound = data.drwNo;
     window._latestNums = nums;
     window._latestBonus = bonus;
+    drawsByRound[data.drwNo] = { nums, bonus };
+    renderHistory();
     updateCompare();
+    loadHistoryDraws();
 }
 
 function getRank(matchCount, bonusMatch) {

@@ -104,7 +104,10 @@ test('공백 기간별 재출현율과 합계 분석이 글과 일치한다', ()
 });
 
 test('Vercel 주소는 새 도메인으로 영구 이동한다', () => {
-    const [rule] = JSON.parse(read('vercel.json')).redirects;
-    assert.strictEqual(rule.destination, 'https://lucky-collector.com/:path*');
-    assert.strictEqual(rule.permanent, true);
+    // 루트(/)는 /(.*)에 걸리지 않아 따로 둔다
+    const rules = JSON.parse(read('vercel.json')).redirects;
+    const bySource = Object.fromEntries(rules.map(rule => [rule.source, rule]));
+    assert.strictEqual(bySource['/'].destination, 'https://lucky-collector.com/');
+    assert.strictEqual(bySource['/(.*)'].destination, 'https://lucky-collector.com/$1');
+    rules.forEach(rule => assert.strictEqual(rule.permanent, true));
 });

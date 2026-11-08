@@ -250,6 +250,45 @@ body {
     white-space: nowrap;
 }
 
+.history-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.result-line {
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
+}
+
+.result-line.pending { color: #555; }
+.result-line.win { color: #f0ad00; font-weight: 700; }
+
+.ball.ball-miss { opacity: 0.35; }
+
+.history-summary {
+    background: #2a2a2a;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: #ccc;
+    line-height: 1.5;
+}
+
+.history-summary strong { color: #f0ad00; }
+
+.history-summary span {
+    display: block;
+    font-size: 11px;
+    color: #777;
+    margin-top: 4px;
+}
+
+#scrollHint.has-result { color: #f0ad00; }
+
 .history-balls {
     display: flex;
     gap: 5px;
