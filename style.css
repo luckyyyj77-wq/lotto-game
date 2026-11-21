@@ -179,6 +179,32 @@ body {
 }
 
 /* ===========================
+   첫 화면 소개 한 줄
+=========================== */
+#siteTagline {
+    height: 22px;
+    line-height: 22px;
+    margin: 0;
+    padding: 0 12px;
+    font-size: 12px;
+    color: #aaa;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+}
+
+/* 홈 콘텐츠 첫 섹션 소개 글 */
+.intro-text {
+    font-size: 14px;
+    line-height: 1.75;
+    color: #ccc;
+    margin: 0 0 14px;
+}
+
+.intro-text a { color: #8fb4ff; }
+
+/* ===========================
    스크롤 유도
 =========================== */
 #scrollHint {
@@ -916,6 +942,12 @@ body {
 
     #gameCanvas {
         border-radius: 10px;
+    }
+
+    #siteTagline {
+        height: 26px;
+        line-height: 26px;
+        font-size: 13px;
     }
 
     #luckyNumbers {
