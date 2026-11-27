@@ -10,8 +10,8 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const storyFiles = fs.readdirSync(root).filter(file => /^story-.*\.html$/.test(file));
 const sitePages = ['index.html', 'guide.html', 'odds.html', 'tax.html', 'faq.html', 'about.html', 'privacy.html', 'stories.html', 'check.html', ...storyFiles];
 
-test('글이 11편 있고 목록과 sitemap에 모두 올라가 있다', () => {
-    assert.strictEqual(storyFiles.length, 12);
+test('글이 13편 있고 목록과 sitemap에 모두 올라가 있다', () => {
+    assert.strictEqual(storyFiles.length, 13);
     const hub = read('stories.html');
     const sitemap = read('sitemap.xml');
     storyFiles.forEach(file => {
@@ -203,6 +203,68 @@ test('1,250회 분석의 통계가 1~1,250회 데이터와 일치한다', () => 
     assert.strictEqual((last50.reduce((a, r) => a + r.winners, 0) / 50).toFixed(1), '15.0');
     assert.strictEqual(last50.filter(r => r.winners <= 9).length, 5);
     assert.strictEqual(last50.filter(r => r.amount > cur.amount).length, 5);
+});
+
+test('1,251회 분석의 통계가 1~1,251회 데이터와 일치한다', () => {
+    const draws = JSON.parse(read('data/draws.json')).filter(r => r.round <= 1251);
+    assert.strictEqual(draws.length, 1251);
+    const byRound = n => draws.find(r => r.round === n);
+    const cur = byRound(1251);
+    assert.deepStrictEqual(cur.nums, [14, 18, 19, 29, 40, 45]);
+    assert.strictEqual(cur.bonus, 1);
+    assert.strictEqual(cur.winners, 14);
+    assert.strictEqual(cur.amount, 2068843286);
+    const before = draws.filter(r => r.round < 1251);
+    const overlap = (a, b) => a.filter(n => b.includes(n)).length;
+    const article = read('story-round-1251.html');
+
+    // 번호별 출현 횟수와 직전 출현 회차
+    const expected = { 14: [173, 1247], 18: [182, 1250], 19: [171, 1240], 29: [156, 1236], 40: [174, 1237], 45: [176, 1247], 1: [172, 1250] };
+    Object.entries(expected).forEach(([n, [count, last]]) => {
+        const list = before.filter(r => r.nums.includes(Number(n)));
+        assert.strictEqual(list.length, count, `${n}번 횟수`);
+        assert.strictEqual(Math.max(...list.map(r => r.round)), last, `${n}번 직전 회차`);
+        assert.ok(article.includes(`<td>${count}번</td>`), `${n}번 횟수 표기`);
+    });
+    assert.deepStrictEqual(draws.filter(r => r.round >= 1243 && r.nums.includes(18)).map(r => r.round), [1243, 1244, 1248, 1250, 1251]);
+    const counts = Array.from({ length: 45 }, (_, i) => [i + 1, draws.filter(r => r.nums.includes(i + 1)).length]).sort((a, b) => b[1] - a[1]);
+    assert.deepStrictEqual(counts.slice(0, 4).map(c => c[1]), [188, 184, 184, 183]);
+    assert.strictEqual(counts[3][0], 18);
+
+    // 1~10 없음, 30번대 없음, 둘 다
+    const no10 = r => r.nums[0] >= 11;
+    const no30s = r => !r.nums.some(n => n >= 30 && n <= 39);
+    assert.strictEqual(draws.filter(no10).length, 273);
+    assert.strictEqual(draws.filter(no30s).length, 266);
+    const both = draws.filter(r => no10(r) && no30s(r)).map(r => r.round);
+    assert.strictEqual(both.length, 31);
+    assert.deepStrictEqual(both.slice(-2), [1246, 1251]);
+
+    // 모양: 합계, 홀짝, 연속번호, 직전 회차 겹침
+    const sums = draws.map(r => r.nums.reduce((a, b) => a + b, 0));
+    assert.strictEqual((sums.filter(s => s >= 165).length / sums.length * 100).toFixed(1), '20.9');
+    assert.strictEqual(draws.filter(r => r.nums.filter(n => n % 2).length === 3).length, 416);
+    const consec = r => r.nums.some((n, i) => i > 0 && n - r.nums[i - 1] === 1);
+    assert.strictEqual((draws.filter(consec).length / draws.length * 100).toFixed(1), '51.9');
+    assert.strictEqual(overlap(cur.nums, byRound(1250).nums), 1);
+    let one = 0; for (let k = 2; k <= 1251; k++) if (overlap(byRound(k).nums, byRound(k - 1).nums) === 1) one++;
+    assert.strictEqual(one, 531);
+
+    // 지난 1,250회에 대 본 결과
+    const matches = before.map(r => overlap(cur.nums, r.nums));
+    assert.strictEqual(Math.max(...matches), 4);
+    assert.deepStrictEqual(before.filter((r, i) => matches[i] === 4).map(r => r.round), [1090]);
+    assert.strictEqual(byRound(1090).bonus, 1);
+    assert.strictEqual(matches.filter(m => m === 3).length, 30);
+    assert.ok(article.includes('<td>1번</td>') && article.includes('<td>30번</td>') && article.includes('<td>1,219번</td>'));
+
+    // 앞 50회와 1등 비교
+    const last50 = draws.filter(r => r.round >= 1201 && r.round <= 1250);
+    assert.strictEqual((last50.reduce((a, r) => a + r.winners, 0) / 50).toFixed(1), '15.0');
+    const w = last50.map(r => r.winners).sort((a, b) => a - b);
+    assert.strictEqual((w[24] + w[25]) / 2, 14);
+    const amt = last50.map(r => r.amount).sort((a, b) => a - b);
+    assert.strictEqual(((amt[24] + amt[25]) / 2 / 1e8).toFixed(1), '20.1');
 });
 
 test('홈 첫 화면에 소개 문장과 최신 회차 분석 링크가 있다', () => {
